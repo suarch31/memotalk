@@ -654,12 +654,14 @@ $('ctx-cal-add').onclick = () => {
 };
 
 $('ctx-delete').onclick = () => {
+  const msgId = activeMessageId; // closeMenus前に保存
+  const threadId = currentThreadId;
   closeMenus();
-  if (!activeMessageId || !currentThreadId) return;
-  db.messages[currentThreadId] = (db.messages[currentThreadId] || []).filter(m => m.id !== activeMessageId);
-  const t = db.threads.find(x => x.id === currentThreadId);
+  if (!msgId || !threadId) return;
+  db.messages[threadId] = (db.messages[threadId] || []).filter(m => m.id !== msgId);
+  const t = db.threads.find(x => x.id === threadId);
   if (t) {
-    const r = db.messages[currentThreadId];
+    const r = db.messages[threadId];
     t.updatedAt = r.length ? r[r.length-1].createdAt : t.createdAt;
   }
   save(); renderMessages();
