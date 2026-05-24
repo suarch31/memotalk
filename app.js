@@ -53,6 +53,10 @@ function save() {
     schedulePush();
   }
 }
+// UIのみの変更（タブ切替など）はlastModifiedを更新しない
+function saveUI() {
+  localStorage.setItem(DB_KEY, JSON.stringify(db));
+}
 function uid()  { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
 // ================= 時刻フォーマット =================
@@ -110,7 +114,7 @@ document.querySelectorAll('.nav-tab').forEach(btn => {
 });
 
 function switchTab(name) {
-  db.currentTab = name; save();
+  db.currentTab = name; saveUI();  // UIのみ → lastModified更新しない
   document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
   if (name === 'memo')     renderThreads();
@@ -396,7 +400,8 @@ async function initialPullPush() {
     const cloud = snap.val();
     const localStamp = db.lastModified || 0;
     const cloudStamp = (cloud && cloud.lastModified) || 0;
-    if (cloud && cloudStamp > localStamp) {
+    if (cloud && (cloudStamp > localStamp || !hasLocalData())) {
+      // クラウドが新しい OR ローカルにデータがない → クラウドから取得
       applyRemote(cloud);
       showToast('☁️ クラウドから取得');
     } else if (hasLocalData()) {
@@ -405,6 +410,7 @@ async function initialPullPush() {
     }
   } catch (e) {
     console.error('初期同期失敗', e);
+    showToast('同期失敗: ' + (e.code || e.message));
   }
 }
 
