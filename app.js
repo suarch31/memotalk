@@ -744,17 +744,17 @@ $('btn-send').onclick = () => {
   const t = $('message-input').value.trim();
   if (t) { sendMsg(t); $('message-input').value = ''; autoResize(); }
 };
-// Enterは改行のみ（送信はボタン専用）
-$('message-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-    // Ctrl+Enter で送信（PC向け）
-    e.preventDefault();
-    const t = $('message-input').value.trim();
-    if (t) { sendMsg(t); $('message-input').value = ''; autoResize(); }
-  }
-  // それ以外のEnterはデフォルト（改行）
-});
+// ① Enterは改行のみ・送信はボタン専用（keydownハンドラ不要）
 $('message-input').addEventListener('input', autoResize);
+
+// ② キーボード表示時にチャット欄が自動スクロールしないよう位置を固定
+$('message-input').addEventListener('focus', () => {
+  const list = $('message-list');
+  const saved = list.scrollTop;
+  setTimeout(() => { list.scrollTop = saved; }, 50);
+  setTimeout(() => { list.scrollTop = saved; }, 200);
+  setTimeout(() => { list.scrollTop = saved; }, 400);
+});
 function autoResize() {
   const el = $('message-input');
   el.style.height = 'auto';
@@ -1552,10 +1552,22 @@ function closeMenus() {
   hideOverlay();
   activeMessageId = null;
 }
+// ⑤ タップ(<250ms)=コンテキストメニュー、長押し(500ms+)=OSのテキスト選択
 function addLongPress(el, cb) {
-  el.addEventListener('touchstart', e => { lpTimer = setTimeout(() => cb(e.touches[0]), 550); }, { passive: true });
-  el.addEventListener('touchend',  () => clearTimeout(lpTimer), { passive: true });
-  el.addEventListener('touchmove', () => clearTimeout(lpTimer), { passive: true });
+  let t0 = 0, moved = false;
+  el.addEventListener('touchstart', () => { t0 = Date.now(); moved = false; }, { passive: true });
+  el.addEventListener('touchmove',  () => { moved = true; },                  { passive: true });
+  el.addEventListener('touchend', e => {
+    if (moved) return;
+    const elapsed = Date.now() - t0;
+    if (elapsed < 250) {
+      // 短タップ → コンテキストメニュー
+      e.preventDefault();
+      cb(e.changedTouches[0]);
+    }
+    // 250ms以上はOSのテキスト選択に委ねる（何もしない）
+  });
+  // PC 右クリック用
   el.addEventListener('contextmenu', e => { e.preventDefault(); cb(e); });
 }
 
