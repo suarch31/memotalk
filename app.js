@@ -616,7 +616,7 @@ function scrollBottom() {
 function showMsgMenu(msgId, e) {
   closeMenus();
   activeMessageId = msgId;
-  positionMenu($('context-menu'), e.clientX ?? e.pageX, e.clientY ?? e.pageY);
+  positionMenu($('context-menu'), e.clientX ?? e.pageX, e.clientY ?? e.pageY, 38); // 10mm下
   $('context-menu').classList.add('active');
   showOverlay(closeMenus);
   if (navigator.vibrate) navigator.vibrate(30);
@@ -1538,9 +1538,9 @@ $('btn-delete-stamp').onclick = () => {
 };
 
 // ================= ユーティリティ =================
-function positionMenu(el, x, y) {
+function positionMenu(el, x, y, offsetY = 0) {
   el.style.left = Math.min(x, window.innerWidth  - 200) + 'px';
-  el.style.top  = Math.min(y, window.innerHeight - 200) + 'px';
+  el.style.top  = Math.min(y + offsetY, window.innerHeight - 200) + 'px';
 }
 function showOverlay(cb) {
   $('overlay').classList.add('active');
