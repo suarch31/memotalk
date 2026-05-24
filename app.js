@@ -321,6 +321,13 @@ function initFirebase() {
     fbAuth = firebase.auth();
     fbDb   = firebase.database();
     fbAuth.onAuthStateChanged(handleAuthChange);
+    // リダイレクトログイン後の結果を受け取る
+    fbAuth.getRedirectResult().catch(err => {
+      if (err.code && err.code !== 'auth/popup-closed-by-user') {
+        console.error('リダイレクトログイン失敗', err);
+        showToast('ログイン失敗: ' + err.message);
+      }
+    });
   } catch (e) {
     console.error('Firebase初期化失敗', e);
   }
@@ -349,11 +356,11 @@ function handleAuthChange(user) {
 }
 
 function fbLogin() {
-  if (!fbAuth) { alert('Firebase未初期化'); return; }
+  if (!fbAuth) { showToast('Firebase未初期化です'); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
-  fbAuth.signInWithPopup(provider).catch(err => {
-    if (err.code === 'auth/popup-closed-by-user') return;
-    alert('ログイン失敗: ' + err.message);
+  // スマホはリダイレクト方式（ポップアップ対策）
+  fbAuth.signInWithRedirect(provider).catch(err => {
+    showToast('ログイン失敗: ' + err.message);
   });
 }
 function fbLogout() {
