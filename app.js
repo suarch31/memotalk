@@ -622,6 +622,20 @@ function showMsgMenu(msgId, e) {
   if (navigator.vibrate) navigator.vibrate(30);
 }
 
+$('ctx-copy').onclick = () => {
+  const m = findMsg(activeMessageId);
+  closeMenus();
+  if (!m || m.type === 'image') return;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(m.content).then(() => showToast('📋 コピーしました'));
+  } else {
+    // フォールバック
+    const ta = document.createElement('textarea');
+    ta.value = m.content; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('📋 コピーしました');
+  }
+};
 $('ctx-reaction').onclick = () => {
   $('context-menu').classList.remove('active');
   positionMenu($('reaction-menu'), parseFloat($('context-menu').style.left), parseFloat($('context-menu').style.top));
@@ -1559,54 +1573,39 @@ function closeMenus() {
 }
 // スレッド・APP・常駐アイテム用：長押し(550ms)でメニュー（従来通り）
 function addLongPress(el, cb) {
-  el.addEventListener('touchstart', e => { lpTimer = setTimeout(() => cb(e.touches[0]), 550); }, { passive: true });
+  // タッチ座標を事前にキャプチャ（タイマー発火時にtouches[]は消えているため）
+  let lx = 0, ly = 0;
+  el.addEventListener('touchstart', e => {
+    lx = e.touches[0].clientX; ly = e.touches[0].clientY;
+    lpTimer = setTimeout(() => cb({ clientX: lx, clientY: ly }), 550);
+  }, { passive: true });
   el.addEventListener('touchend',   () => clearTimeout(lpTimer), { passive: true });
   el.addEventListener('touchmove',  () => clearTimeout(lpTimer), { passive: true });
   el.addEventListener('contextmenu', e => { e.preventDefault(); cb(e); });
 }
 
-// ⑤ メッセージバブル専用
-//   1秒長押し → リアクション/メニュー
-//   ダブルタップ → テキスト全選択（コピー）
+// ⑤ メッセージバブル専用：1秒長押し=メニュー
 function addBubbleTap(el, cb) {
-  let lastTap = 0, lpTimer = null, lpFired = false;
+  let lx = 0, ly = 0, lpFired = false, bTimer = null;
 
   el.addEventListener('touchstart', e => {
+    lx = e.touches[0].clientX; ly = e.touches[0].clientY;
     lpFired = false;
-    lpTimer = setTimeout(() => {
+    bTimer = setTimeout(() => {
       lpFired = true;
-      cb(e.touches[0]);          // 1秒長押し → メニュー
+      cb({ clientX: lx, clientY: ly }); // 1秒長押し → メニュー
     }, 1000);
   }, { passive: true });
 
   el.addEventListener('touchmove', () => {
-    clearTimeout(lpTimer); lpFired = true; // スクロール中はキャンセル
+    clearTimeout(bTimer); lpFired = true;
   }, { passive: true });
 
-  el.addEventListener('touchend', e => {
-    clearTimeout(lpTimer);
-    if (lpFired) return;         // 長押し発動済み／スクロール中はスキップ
-    const now = Date.now();
-    if (now - lastTap < 350) {
-      // ダブルタップ → テキスト全選択
-      e.preventDefault();
-      selectBubbleText(el);
-      lastTap = 0;
-    } else {
-      lastTap = now;             // シングルタップは次タップ待ち
-    }
-  });
+  el.addEventListener('touchend', () => {
+    clearTimeout(bTimer);
+  }, { passive: true });
 
-  el.addEventListener('contextmenu', e => { e.preventDefault(); cb(e); }); // PC右クリック
-}
-
-function selectBubbleText(el) {
-  try {
-    const range = document.createRange();
-    range.selectNodeContents(el);
-    const sel = window.getSelection();
-    if (sel) { sel.removeAllRanges(); sel.addRange(range); }
-  } catch(e) {}
+  el.addEventListener('contextmenu', e => { e.preventDefault(); cb(e); });
 }
 
 // ② キーボード表示時に自動スクロールしない（チャット背景固定）
