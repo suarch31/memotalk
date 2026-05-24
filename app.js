@@ -1592,16 +1592,27 @@ function addBubbleTap(el, cb) {
 
   el.addEventListener('touchstart', e => {
     lx = e.touches[0].clientX; ly = e.touches[0].clientY;
-    bTimer = setTimeout(() => {
-      // OSがすでに文字を選択していたらメニューを出さない
+
+    // 文字選択が始まった瞬間にタイマーをキャンセル
+    const onSelChange = () => {
       const sel = window.getSelection();
-      if (sel && sel.toString().length > 0) return;
+      if (sel && sel.toString().length > 0) {
+        clearTimeout(bTimer);
+        document.removeEventListener('selectionchange', onSelChange);
+      }
+    };
+    document.addEventListener('selectionchange', onSelChange);
+
+    bTimer = setTimeout(() => {
+      document.removeEventListener('selectionchange', onSelChange);
       cb({ clientX: lx, clientY: ly }); // 1秒長押し → メニュー
     }, 1000);
   }, { passive: true });
 
-  el.addEventListener('touchmove',  () => clearTimeout(bTimer), { passive: true });
-  el.addEventListener('touchend',   () => clearTimeout(bTimer), { passive: true });
+  const cancel = () => clearTimeout(bTimer);
+  el.addEventListener('touchmove',   cancel, { passive: true });
+  el.addEventListener('touchend',    cancel, { passive: true });
+  el.addEventListener('touchcancel', cancel, { passive: true });
   el.addEventListener('contextmenu', e => { e.preventDefault(); cb(e); });
 }
 
