@@ -605,8 +605,7 @@ function renderMessages() {
   $('message-list').innerHTML = html;
 
   $('message-list').querySelectorAll('.msg-bubble').forEach(b => {
-    b.addEventListener('contextmenu', e => { e.preventDefault(); showMsgMenu(b.dataset.id, e); });
-    addLongPress(b, e => showMsgMenu(b.dataset.id, e));
+    addBubbleTap(b, e => showMsgMenu(b.dataset.id, e)); // ⑤タップ=メニュー/長押し=テキスト選択
   });
 }
 
@@ -1344,8 +1343,7 @@ function renderDayEntries() {
     </div>
   `).join('');
   $('day-entry-list').querySelectorAll('.msg-bubble').forEach(b => {
-    b.addEventListener('contextmenu', e => { e.preventDefault(); showDayEntryMenu(b.dataset.id, e); });
-    addLongPress(b, e => showDayEntryMenu(b.dataset.id, e));
+    addBubbleTap(b, e => showDayEntryMenu(b.dataset.id, e));
   });
 }
 
@@ -1559,23 +1557,29 @@ function closeMenus() {
   hideOverlay();
   activeMessageId = null;
 }
-// ⑤ タップ(<250ms)=コンテキストメニュー、長押し(500ms+)=OSのテキスト選択
+// スレッド・APP・常駐アイテム用：長押し(550ms)でメニュー（従来通り）
 function addLongPress(el, cb) {
+  el.addEventListener('touchstart', e => { lpTimer = setTimeout(() => cb(e.touches[0]), 550); }, { passive: true });
+  el.addEventListener('touchend',   () => clearTimeout(lpTimer), { passive: true });
+  el.addEventListener('touchmove',  () => clearTimeout(lpTimer), { passive: true });
+  el.addEventListener('contextmenu', e => { e.preventDefault(); cb(e); });
+}
+
+// ⑤ メッセージバブル専用：タップ(<250ms)=メニュー、長押し=OSのテキスト選択
+function addBubbleTap(el, cb) {
   let t0 = 0, moved = false;
   el.addEventListener('touchstart', () => { t0 = Date.now(); moved = false; }, { passive: true });
-  el.addEventListener('touchmove',  () => { moved = true; },                  { passive: true });
+  el.addEventListener('touchmove',  () => { moved = true; },                   { passive: true });
   el.addEventListener('touchend', e => {
     if (moved) return;
     const elapsed = Date.now() - t0;
-    if (elapsed < 250) {
-      // 短タップ → コンテキストメニュー
+    if (elapsed < 300) {
       e.preventDefault();
       cb(e.changedTouches[0]);
     }
-    // 250ms以上はOSのテキスト選択に委ねる（何もしない）
+    // 300ms以上はOSのテキスト選択（長押し）に委ねる
   });
-  // PC 右クリック用
-  el.addEventListener('contextmenu', e => { e.preventDefault(); cb(e); });
+  el.addEventListener('contextmenu', e => { e.preventDefault(); cb(e); }); // PC右クリック
 }
 
 // ② キーボード表示時に自動スクロールしない（チャット背景固定）
