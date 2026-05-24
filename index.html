@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#00B900">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>MemoTalk</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============= メイン（タブ式） ============= -->
+<div id="main-view" class="view active">
+
+  <!-- ===== メモタブ ===== -->
+  <div id="tab-memo" class="tab-pane active">
+    <header class="app-header">
+      <h1>メモ</h1>
+      <button id="btn-search-memo" class="icon-btn" title="検索">&#128269;</button>
+      <button id="btn-new-thread" class="icon-btn" title="新規">＋</button>
+      <button id="btn-memo-menu" class="icon-btn" title="メニュー">&#8942;</button>
+    </header>
+    <div id="search-bar-memo" class="search-bar">
+      <input id="search-input-memo" placeholder="スレッド・メッセージを検索...">
+      <button id="btn-close-search-memo" class="icon-btn">&times;</button>
+    </div>
+    <div id="thread-list" class="thread-list"></div>
+  </div>
+
+  <!-- ===== APPタブ ===== -->
+  <div id="tab-app" class="tab-pane">
+    <header class="app-header">
+      <h1>APP</h1>
+      <button id="btn-search-app" class="icon-btn">&#128269;</button>
+      <button id="btn-new-app" class="icon-btn">＋</button>
+      <button id="btn-app-menu" class="icon-btn">&#8942;</button>
+    </header>
+    <div id="search-bar-app" class="search-bar">
+      <input id="search-input-app" placeholder="アプリを検索...">
+      <button id="btn-close-search-app" class="icon-btn">&times;</button>
+    </div>
+    <div id="app-list" class="app-list"></div>
+  </div>
+
+  <!-- ===== カレンダータブ ===== -->
+  <div id="tab-calendar" class="tab-pane">
+    <header class="app-header">
+      <button id="btn-prev-month" class="icon-btn">&#8249;</button>
+      <h1 id="cal-title">2026年5月</h1>
+      <button id="btn-next-month" class="icon-btn">&#8250;</button>
+      <button id="btn-today" class="icon-btn" title="今日">&#9678;</button>
+      <button id="btn-cal-menu" class="icon-btn">&#8942;</button>
+    </header>
+    <div class="cal-weekdays">
+      <div class="cal-wd sun">日</div>
+      <div class="cal-wd">月</div>
+      <div class="cal-wd">火</div>
+      <div class="cal-wd">水</div>
+      <div class="cal-wd">木</div>
+      <div class="cal-wd">金</div>
+      <div class="cal-wd sat">土</div>
+    </div>
+    <div id="cal-grid" class="cal-grid"></div>
+  </div>
+
+  <!-- ===== 常駐プログラムタブ ===== -->
+  <div id="tab-resident" class="tab-pane">
+    <header class="app-header">
+      <h1>常駐</h1>
+      <button id="btn-new-resident" class="icon-btn">＋</button>
+      <button id="btn-resident-menu" class="icon-btn">&#8942;</button>
+    </header>
+    <div id="resident-list" class="resident-list"></div>
+  </div>
+
+  <!-- ===== 下部ナビゲーション ===== -->
+  <nav class="bottom-nav">
+    <button class="nav-tab active" data-tab="memo">
+      <div class="nav-icon">&#128172;</div>
+      <div class="nav-label">メモ</div>
+    </button>
+    <button class="nav-tab" data-tab="app">
+      <div class="nav-icon">&#128241;</div>
+      <div class="nav-label">APP</div>
+    </button>
+    <button class="nav-tab" data-tab="calendar">
+      <div class="nav-icon">&#128197;</div>
+      <div class="nav-label">カレンダー</div>
+    </button>
+    <button class="nav-tab" data-tab="resident">
+      <div class="nav-icon">&#9881;&#65039;</div>
+      <div class="nav-label">常駐</div>
+    </button>
+  </nav>
+</div>
+
+<!-- ============= チャット画面 ============= -->
+<div id="screen-chat" class="view">
+  <header class="chat-header">
+    <button id="btn-back" class="icon-btn back-btn">&#8592;</button>
+    <h2 id="chat-title">スレッド名</h2>
+    <button id="btn-edit-thread" class="icon-btn">&#8942;</button>
+  </header>
+  <div id="message-list" class="message-list"></div>
+  <div class="input-area">
+    <button id="btn-image" class="icon-btn img-btn">&#128247;</button>
+    <textarea id="message-input" placeholder="メッセージを入力..." rows="1"></textarea>
+    <button id="btn-send" class="send-btn">送信</button>
+  </div>
+  <input type="file" id="image-input" accept="image/*" style="display:none">
+</div>
+
+<!-- ============= APP編集画面 ============= -->
+<div id="screen-app-edit" class="view">
+  <header class="chat-header">
+    <button id="btn-back-app" class="icon-btn back-btn">&#8592;</button>
+    <h2 id="app-edit-title">アプリ編集</h2>
+    <button id="btn-save-app" class="text-btn">保存</button>
+  </header>
+  <div class="form-body">
+    <label class="form-label">アイコン</label>
+    <div class="icon-picker">
+      <div id="app-icon-preview" class="app-icon-large">📱</div>
+      <button id="btn-pick-icon" class="btn-sub">絵文字を選択</button>
+      <button id="btn-pick-image" class="btn-sub">画像を選択</button>
+      <input type="file" id="app-image-input" accept="image/*" style="display:none">
+    </div>
+
+    <label class="form-label">アプリ名 *</label>
+    <input type="text" id="app-name-input" placeholder="例: 株価通知Bot" maxlength="60">
+
+    <label class="form-label">URL / 起動先</label>
+    <input type="text" id="app-url-input" placeholder="https://... または C:\path\to\app">
+
+    <label class="form-label">説明</label>
+    <textarea id="app-desc-input" placeholder="アプリの説明・メモ" rows="4"></textarea>
+
+    <label class="form-label">タグ（カンマ区切り）</label>
+    <input type="text" id="app-tag-input" placeholder="例: 通知, 株, Python">
+
+    <label class="form-label">カラー</label>
+    <div class="color-row">
+      <div class="color-swatch green"  data-color="green"></div>
+      <div class="color-swatch blue"   data-color="blue"></div>
+      <div class="color-swatch yellow" data-color="yellow"></div>
+      <div class="color-swatch red"    data-color="red"></div>
+      <div class="color-swatch gray"   data-color="gray"></div>
+    </div>
+
+    <button id="btn-delete-app" class="btn-danger">このアプリを削除</button>
+  </div>
+</div>
+
+<!-- ============= 常駐編集画面 ============= -->
+<div id="screen-resident-edit" class="view">
+  <header class="chat-header">
+    <button id="btn-back-resident" class="icon-btn back-btn">&#8592;</button>
+    <h2 id="resident-edit-title">常駐編集</h2>
+    <button id="btn-save-resident" class="text-btn">保存</button>
+  </header>
+  <div class="form-body">
+    <label class="form-label">プログラム名 *</label>
+    <input type="text" id="res-name-input" placeholder="例: stock_news_mailer">
+
+    <label class="form-label">パス / コマンド</label>
+    <input type="text" id="res-path-input" placeholder="例: python stock_news_mailer.py">
+
+    <label class="form-label">スケジュール</label>
+    <input type="text" id="res-sched-input" placeholder="例: 毎日 9:00 / 平日 18:00">
+
+    <label class="form-label">説明</label>
+    <textarea id="res-desc-input" placeholder="何をするプログラムか" rows="4"></textarea>
+
+    <label class="form-label">状態</label>
+    <div class="toggle-row">
+      <label class="toggle">
+        <input type="checkbox" id="res-active-input">
+        <span class="toggle-slider"></span>
+        <span class="toggle-label">有効</span>
+      </label>
+    </div>
+
+    <label class="form-label">最終実行</label>
+    <div class="last-run-row">
+      <span id="res-lastrun-display">未実行</span>
+      <button id="btn-mark-run" class="btn-sub">今実行したことにする</button>
+    </div>
+
+    <button id="btn-delete-resident" class="btn-danger">この常駐を削除</button>
+  </div>
+</div>
+
+<!-- ============= 同期設定画面 ============= -->
+<div id="screen-settings" class="view">
+  <header class="chat-header">
+    <button id="btn-back-settings" class="icon-btn back-btn">&#8592;</button>
+    <h2>同期設定</h2>
+  </header>
+  <div class="form-body">
+    <!-- ログイン状態 -->
+    <div class="settings-card">
+      <div class="settings-card-label">ログイン状態</div>
+      <div id="sync-account-status" class="settings-account">
+        <div class="acct-avatar" id="acct-avatar">?</div>
+        <div class="acct-info">
+          <div class="acct-name" id="acct-name">未ログイン</div>
+          <div class="acct-mail" id="acct-mail">Firebase未接続</div>
+        </div>
+      </div>
+      <button id="btn-sync-login"  class="btn-sub" style="width:100%; margin-top:10px;">Googleでログイン</button>
+      <button id="btn-sync-logout" class="btn-sub" style="width:100%; margin-top:10px; display:none;">ログアウト</button>
+    </div>
+
+    <!-- 同期モード -->
+    <div class="settings-card">
+      <div class="settings-card-label">同期モード</div>
+      <label class="radio-row">
+        <input type="radio" name="sync-mode" value="manual" id="sync-mode-manual">
+        <span class="radio-text">
+          <strong>手動</strong>
+          <small>下のボタンを押した時だけ同期</small>
+        </span>
+      </label>
+      <label class="radio-row">
+        <input type="radio" name="sync-mode" value="auto5" id="sync-mode-auto5">
+        <span class="radio-text">
+          <strong>5分毎に自動</strong>
+          <small>変更時 + 5分おきに自動同期</small>
+        </span>
+      </label>
+    </div>
+
+    <!-- 同期実行 -->
+    <div class="settings-card">
+      <div class="settings-card-label">最終同期</div>
+      <div id="sync-last" class="settings-last">未同期</div>
+      <button id="btn-sync-now" class="send-btn" style="width:100%; margin-top:14px;">今すぐ同期</button>
+    </div>
+
+    <p class="hint" style="margin-top:20px;">
+      Googleアカウントでログインすると、PC・スマホ間で<br>
+      メモ・カレンダー等が自動同期されます。
+    </p>
+  </div>
+</div>
+
+<!-- ============= カレンダー日付詳細画面 ============= -->
+<div id="screen-cal-day" class="view">
+  <header class="chat-header">
+    <button id="btn-back-cal-day" class="icon-btn back-btn">&#8592;</button>
+    <h2 id="cal-day-title">日付</h2>
+    <button id="btn-cal-day-menu" class="icon-btn">&#8942;</button>
+  </header>
+  <div id="stamp-bar" class="stamp-bar"></div>
+  <div id="day-entry-list" class="message-list"></div>
+  <div class="input-area">
+    <textarea id="cal-day-input" placeholder="メモを入力..." rows="1"></textarea>
+    <div id="cal-day-color-picker" class="inline-color-picker">
+      <div class="color-swatch green selected" data-color="green"></div>
+      <div class="color-swatch blue"  data-color="blue"></div>
+      <div class="color-swatch yellow" data-color="yellow"></div>
+      <div class="color-swatch red"   data-color="red"></div>
+    </div>
+    <button id="btn-cal-day-send" class="send-btn">追加</button>
+  </div>
+</div>
+
+<!-- ============= スタンプ管理画面 ============= -->
+<div id="screen-stamps" class="view">
+  <header class="chat-header">
+    <button id="btn-back-stamps" class="icon-btn back-btn">&#8592;</button>
+    <h2>スタンプ管理</h2>
+    <button id="btn-new-stamp" class="text-btn">＋ 新規</button>
+  </header>
+  <div id="stamp-list" class="stamp-list-page"></div>
+</div>
+
+<!-- ============= スタンプ編集モーダル ============= -->
+<div id="modal-stamp" class="modal">
+  <div class="modal-content">
+    <h3 id="stamp-modal-title">スタンプ</h3>
+    <input type="text" id="stamp-text-input" placeholder="スタンプの文字（例: ✓ジム）" maxlength="20">
+    <div class="color-row" id="stamp-color-row">
+      <div class="color-swatch green selected" data-color="green"></div>
+      <div class="color-swatch blue"   data-color="blue"></div>
+      <div class="color-swatch yellow" data-color="yellow"></div>
+      <div class="color-swatch red"   data-color="red"></div>
+    </div>
+    <div class="modal-buttons">
+      <button id="btn-cancel-stamp" class="btn-cancel">キャンセル</button>
+      <button id="btn-save-stamp" class="btn-ok">保存</button>
+    </div>
+    <button id="btn-delete-stamp" class="btn-danger" style="margin-top:14px; display:none;">削除</button>
+  </div>
+</div>
+
+<!-- ============= 各種モーダル ============= -->
+
+<!-- 新規スレッド -->
+<div id="modal-new-thread" class="modal">
+  <div class="modal-content">
+    <h3>新しいスレッド</h3>
+    <input type="text" id="new-thread-name" placeholder="スレッド名" maxlength="50">
+    <div class="modal-buttons">
+      <button id="btn-cancel-thread" class="btn-cancel">キャンセル</button>
+      <button id="btn-create-thread" class="btn-ok">作成</button>
+    </div>
+  </div>
+</div>
+
+<!-- 絵文字選択 -->
+<div id="modal-emoji" class="modal">
+  <div class="modal-content modal-wide">
+    <h3>絵文字を選択</h3>
+    <div class="emoji-grid">
+      <span class="emoji-cell">📱</span><span class="emoji-cell">💬</span>
+      <span class="emoji-cell">📝</span><span class="emoji-cell">📊</span>
+      <span class="emoji-cell">📈</span><span class="emoji-cell">📉</span>
+      <span class="emoji-cell">💰</span><span class="emoji-cell">💴</span>
+      <span class="emoji-cell">🔔</span><span class="emoji-cell">⚙️</span>
+      <span class="emoji-cell">🤖</span><span class="emoji-cell">🛠️</span>
+      <span class="emoji-cell">📧</span><span class="emoji-cell">📨</span>
+      <span class="emoji-cell">📅</span><span class="emoji-cell">⏰</span>
+      <span class="emoji-cell">🏠</span><span class="emoji-cell">🏢</span>
+      <span class="emoji-cell">🌐</span><span class="emoji-cell">🔗</span>
+      <span class="emoji-cell">📷</span><span class="emoji-cell">🎨</span>
+      <span class="emoji-cell">🎵</span><span class="emoji-cell">🎮</span>
+      <span class="emoji-cell">📚</span><span class="emoji-cell">✏️</span>
+      <span class="emoji-cell">🔍</span><span class="emoji-cell">⭐</span>
+      <span class="emoji-cell">❤️</span><span class="emoji-cell">🔥</span>
+      <span class="emoji-cell">⚡</span><span class="emoji-cell">💡</span>
+    </div>
+    <button id="btn-close-emoji" class="btn-cancel">閉じる</button>
+  </div>
+</div>
+
+<!-- メッセージ操作 -->
+<div id="context-menu" class="context-menu">
+  <button class="ctx-btn" id="ctx-reaction">&#128515; リアクション</button>
+  <button class="ctx-btn" id="ctx-color">&#127912; 色を変更</button>
+  <button class="ctx-btn" id="ctx-cal-add">&#128197; カレンダーに追加</button>
+  <button class="ctx-btn ctx-delete" id="ctx-delete">&#128465; 削除</button>
+</div>
+
+<!-- カレンダー追加モーダル -->
+<div id="modal-cal-add" class="modal">
+  <div class="modal-content">
+    <h3>カレンダーに追加</h3>
+    <div class="cal-add-preview" id="cal-add-preview"></div>
+    <label class="form-label" style="margin-top:0;">追加する日付</label>
+    <input type="date" id="cal-add-date">
+    <div class="quick-date-row">
+      <button class="btn-sub" data-d="0">今日</button>
+      <button class="btn-sub" data-d="1">明日</button>
+      <button class="btn-sub" data-d="7">来週</button>
+    </div>
+    <div class="modal-buttons" style="margin-top:16px;">
+      <button id="btn-cancel-cal-add" class="btn-cancel">キャンセル</button>
+      <button id="btn-confirm-cal-add" class="btn-ok">追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- トースト -->
+<div id="toast" class="toast"></div>
+
+<div id="reaction-menu" class="reaction-menu">
+  <button class="reaction-btn" data-reaction="○">○</button>
+  <button class="reaction-btn" data-reaction="△">△</button>
+  <button class="reaction-btn" data-reaction="×">×</button>
+  <button class="reaction-btn" data-reaction="✓">✓</button>
+</div>
+
+<div id="color-menu" class="color-menu">
+  <div class="color-swatch green"  data-color="green"></div>
+  <div class="color-swatch blue"   data-color="blue"></div>
+  <div class="color-swatch yellow" data-color="yellow"></div>
+  <div class="color-swatch red"    data-color="red"></div>
+</div>
+
+<div id="overlay" class="overlay"></div>
+
+<!-- Firebase SDK (compat: keeps existing app.js as classic script) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
