@@ -1534,6 +1534,29 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
 }
 
+// ================= PWAインストール =================
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  // インストールボタンを表示
+  const btn = document.getElementById('btn-pwa-install');
+  if (btn) btn.style.display = 'flex';
+});
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  const btn = document.getElementById('btn-pwa-install');
+  if (btn) btn.style.display = 'none';
+});
+function pwaInstall() {
+  if (!deferredInstallPrompt) {
+    showToast('Chromeメニュー →「ホーム画面に追加」からインストールできます');
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  deferredInstallPrompt.userChoice.then(() => { deferredInstallPrompt = null; });
+}
+
 // ================= 初期化 =================
 applyIconTheme();
 initFirebase();
