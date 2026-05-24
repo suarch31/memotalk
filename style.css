@@ -352,7 +352,8 @@ html, body {
 .msg-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
 .msg-time { font-size: 10px; color: #999; white-space: nowrap; }
 .msg-reaction {
-  font-size: 13px;
+  font-size: 15px;
+  font-weight: 900;
   background: #fff;
   border-radius: 12px;
   padding: 2px 7px;
@@ -360,6 +361,11 @@ html, body {
   min-width: 28px;
   text-align: center;
 }
+/* リアクション色 */
+.msg-reaction[data-r="○"] { color: #e00; -webkit-text-stroke: 1.5px #e00; }
+.msg-reaction[data-r="△"] { color: #0066cc; -webkit-text-stroke: 1.5px #0066cc; }
+.msg-reaction[data-r="×"] { color: #111; -webkit-text-stroke: 1.5px #111; }
+.msg-reaction[data-r="✓"] { color: #1a8a1a; -webkit-text-stroke: 1.5px #1a8a1a; }
 .msg-bubble {
   max-width: 72%;
   padding: 9px 14px;
@@ -369,7 +375,8 @@ html, body {
   word-break: break-word;
   box-shadow: 0 1px 2px rgba(0,0,0,.12);
   cursor: pointer;
-  user-select: none;
+  user-select: text;
+  -webkit-user-select: text;
 }
 .msg-bubble:active { opacity: .8; }
 .msg-bubble img {
@@ -397,7 +404,32 @@ html, body {
   gap: 6px;
   flex-shrink: 0;
 }
-.img-btn { color: #555; font-size: 24px; padding: 4px 6px; }
+.img-btn { color: #555; font-size: 22px; font-weight: bold; padding: 4px 6px; }
+.attach-menu {
+  display: none;
+  position: absolute;
+  bottom: 64px;
+  left: 10px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.18);
+  overflow: hidden;
+  z-index: 200;
+  flex-direction: column;
+  min-width: 140px;
+}
+.attach-menu.active { display: flex; }
+.attach-item {
+  background: none;
+  border: none;
+  padding: 13px 18px;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+}
+.attach-item:last-child { border-bottom: none; }
+.attach-item:active { background: #f5f5f5; }
 #message-input,
 #cal-day-input {
   flex: 1;

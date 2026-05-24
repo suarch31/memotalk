@@ -579,7 +579,7 @@ function renderMessages() {
   msgs.forEach(m => {
     const d = fmtDate(m.createdAt);
     if (d !== lastDate) { html += `<div class="date-sep"><span>${d}</span></div>`; lastDate = d; }
-    const r = m.reaction ? `<div class="msg-reaction">${m.reaction}</div>` : '';
+    const r = m.reaction ? `<div class="msg-reaction" data-r="${m.reaction}">${m.reaction}</div>` : '';
     const c = m.type === 'image'
       ? `<img src="${m.content}" alt="画像">`
       : esc(m.content).replace(/\n/g, '<br>');
@@ -737,12 +737,15 @@ $('btn-send').onclick = () => {
   const t = $('message-input').value.trim();
   if (t) { sendMsg(t); $('message-input').value = ''; autoResize(); }
 };
+// Enterは改行のみ（送信はボタン専用）
 $('message-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+    // Ctrl+Enter で送信（PC向け）
     e.preventDefault();
     const t = $('message-input').value.trim();
     if (t) { sendMsg(t); $('message-input').value = ''; autoResize(); }
   }
+  // それ以外のEnterはデフォルト（改行）
 });
 $('message-input').addEventListener('input', autoResize);
 function autoResize() {
@@ -751,13 +754,38 @@ function autoResize() {
   el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
 
-$('btn-image').onclick = () => $('image-input').click();
+// ④ ＋ボタン：添付メニュー
+$('btn-attach').onclick = e => {
+  e.stopPropagation();
+  $('attach-menu').classList.toggle('active');
+};
+$('attach-image').onclick = () => {
+  $('attach-menu').classList.remove('active');
+  $('image-input').click();
+};
+$('attach-data').onclick = () => {
+  $('attach-menu').classList.remove('active');
+  $('data-input').click();
+};
+document.addEventListener('click', () => $('attach-menu').classList.remove('active'));
+
 $('image-input').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
   const r = new FileReader();
   r.onload = ev => sendMsg(ev.target.result, 'image');
   r.readAsDataURL(f);
   $('image-input').value = '';
+};
+
+$('data-input').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    const text = `📎 ${f.name}\n\n${ev.target.result}`;
+    sendMsg(text, 'text');
+  };
+  r.readAsText(f, 'utf-8');
+  $('data-input').value = '';
 };
 
 // スレッド新規作成
@@ -1524,11 +1552,8 @@ function addLongPress(el, cb) {
   el.addEventListener('contextmenu', e => { e.preventDefault(); cb(e); });
 }
 
-if ('visualViewport' in window) {
-  window.visualViewport.addEventListener('resize', () => {
-    if ($('screen-chat').classList.contains('active')) scrollBottom();
-  });
-}
+// ② キーボード表示時に自動スクロールしない（チャット背景固定）
+// visualViewport resize での scrollBottom は意図的に削除
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
