@@ -447,6 +447,7 @@ async function pushNow() {
   } catch (e) {
     console.error('push失敗', e);
     showToast('☁️ 同期失敗: ' + (e.code || e.message));
+    throw e;  // runSync にも伝播
   }
 }
 
