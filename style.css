@@ -377,6 +377,7 @@ html, body {
   cursor: pointer;
   user-select: text;
   -webkit-user-select: text;
+  touch-action: pan-y; /* 縦スクロールは許可、ズームは抑制 */
 }
 .msg-bubble:active { opacity: .8; }
 .msg-bubble img {

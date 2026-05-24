@@ -1584,27 +1584,24 @@ function addLongPress(el, cb) {
   el.addEventListener('contextmenu', e => { e.preventDefault(); cb(e); });
 }
 
-// ⑤ メッセージバブル専用：1秒長押し=メニュー
+// ⑤ メッセージバブル専用
+//   〜500ms 長押し → OSのネイティブ文字選択（範囲ハンドルで部分選択可）
+//   1秒 長押し（文字未選択時のみ） → リアクション/メニュー
 function addBubbleTap(el, cb) {
-  let lx = 0, ly = 0, lpFired = false, bTimer = null;
+  let lx = 0, ly = 0, bTimer = null;
 
   el.addEventListener('touchstart', e => {
     lx = e.touches[0].clientX; ly = e.touches[0].clientY;
-    lpFired = false;
     bTimer = setTimeout(() => {
-      lpFired = true;
+      // OSがすでに文字を選択していたらメニューを出さない
+      const sel = window.getSelection();
+      if (sel && sel.toString().length > 0) return;
       cb({ clientX: lx, clientY: ly }); // 1秒長押し → メニュー
     }, 1000);
   }, { passive: true });
 
-  el.addEventListener('touchmove', () => {
-    clearTimeout(bTimer); lpFired = true;
-  }, { passive: true });
-
-  el.addEventListener('touchend', () => {
-    clearTimeout(bTimer);
-  }, { passive: true });
-
+  el.addEventListener('touchmove',  () => clearTimeout(bTimer), { passive: true });
+  el.addEventListener('touchend',   () => clearTimeout(bTimer), { passive: true });
   el.addEventListener('contextmenu', e => { e.preventDefault(); cb(e); });
 }
 
