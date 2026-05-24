@@ -254,9 +254,16 @@
         class="send-btn" style="width:100%; margin-top:10px; display:none;">
         📲 ホーム画面に追加
       </button>
-      <button onclick="pwaInstall()"
-        class="btn-sub" style="width:100%; margin-top:8px;">
-        インストール方法を表示
+      <div id="pwa-install-guide" style="margin-top:10px; padding:12px; background:#f0f8ff; border-radius:8px; font-size:13px; line-height:1.7;">
+        <b>📱 手動インストール手順</b><br>
+        ① Chromeの右上 <b>「⋮」</b> をタップ<br>
+        ② <b>「ホーム画面に追加」</b> または<br>
+        　 <b>「アプリをインストール」</b> をタップ<br>
+        ③ 「追加」をタップ
+      </div>
+      <button onclick="clearCacheReload()"
+        class="btn-sub" style="width:100%; margin-top:10px; color:#888;">
+        🔄 キャッシュクリア＆再読み込み
       </button>
     </div>
   </div>

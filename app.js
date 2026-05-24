@@ -1557,6 +1557,18 @@ function pwaInstall() {
   deferredInstallPrompt.userChoice.then(() => { deferredInstallPrompt = null; });
 }
 
+function clearCacheReload() {
+  if ('caches' in window) {
+    caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).then(() => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(regs => {
+          Promise.all(regs.map(r => r.unregister())).then(() => location.reload(true));
+        });
+      } else { location.reload(true); }
+    });
+  } else { location.reload(true); }
+}
+
 // ================= 初期化 =================
 applyIconTheme();
 initFirebase();
