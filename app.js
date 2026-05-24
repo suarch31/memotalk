@@ -1565,21 +1565,48 @@ function addLongPress(el, cb) {
   el.addEventListener('contextmenu', e => { e.preventDefault(); cb(e); });
 }
 
-// ⑤ メッセージバブル専用：タップ(<250ms)=メニュー、長押し=OSのテキスト選択
+// ⑤ メッセージバブル専用
+//   1秒長押し → リアクション/メニュー
+//   ダブルタップ → テキスト全選択（コピー）
 function addBubbleTap(el, cb) {
-  let t0 = 0, moved = false;
-  el.addEventListener('touchstart', () => { t0 = Date.now(); moved = false; }, { passive: true });
-  el.addEventListener('touchmove',  () => { moved = true; },                   { passive: true });
+  let lastTap = 0, lpTimer = null, lpFired = false;
+
+  el.addEventListener('touchstart', e => {
+    lpFired = false;
+    lpTimer = setTimeout(() => {
+      lpFired = true;
+      cb(e.touches[0]);          // 1秒長押し → メニュー
+    }, 1000);
+  }, { passive: true });
+
+  el.addEventListener('touchmove', () => {
+    clearTimeout(lpTimer); lpFired = true; // スクロール中はキャンセル
+  }, { passive: true });
+
   el.addEventListener('touchend', e => {
-    if (moved) return;
-    const elapsed = Date.now() - t0;
-    if (elapsed < 300) {
+    clearTimeout(lpTimer);
+    if (lpFired) return;         // 長押し発動済み／スクロール中はスキップ
+    const now = Date.now();
+    if (now - lastTap < 350) {
+      // ダブルタップ → テキスト全選択
       e.preventDefault();
-      cb(e.changedTouches[0]);
+      selectBubbleText(el);
+      lastTap = 0;
+    } else {
+      lastTap = now;             // シングルタップは次タップ待ち
     }
-    // 300ms以上はOSのテキスト選択（長押し）に委ねる
   });
+
   el.addEventListener('contextmenu', e => { e.preventDefault(); cb(e); }); // PC右クリック
+}
+
+function selectBubbleText(el) {
+  try {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+  } catch(e) {}
 }
 
 // ② キーボード表示時に自動スクロールしない（チャット背景固定）
