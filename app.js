@@ -1615,21 +1615,28 @@ function positionMenu(el, x, y, offsetY = 0) {
   el.style.top  = Math.min(y + offsetY, window.innerHeight - 200) + 'px';
 }
 function showOverlay(cb) {
-  $('overlay').classList.add('active');
-  let done = false;
-  const handle = e => {
-    if (done) return;
-    done = true;
-    e.preventDefault();   // ghost click 防止
-    hideOverlay();
+  const ov = $('overlay');
+  ov.classList.add('active');
+  // ontouchend/onclick の代入方式で重複リスナーを防ぐ
+  ov.ontouchend = e => {
+    e.preventDefault();
+    ov.ontouchend = null;
+    ov.onclick    = null;
+    ov.classList.remove('active');
     if (cb) cb();
   };
-  // touchend で即時反応（300ms遅延なし）、PCはclickで対応
-  $('overlay').addEventListener('touchend', handle, { once: true, passive: false });
-  $('overlay').addEventListener('click',    handle, { once: true });
+  ov.onclick = () => {
+    ov.ontouchend = null;
+    ov.onclick    = null;
+    ov.classList.remove('active');
+    if (cb) cb();
+  };
 }
 function hideOverlay() {
-  $('overlay').classList.remove('active');
+  const ov = $('overlay');
+  ov.classList.remove('active');
+  ov.ontouchend = null;
+  ov.onclick    = null;
 }
 function closeMenus() {
   $('context-menu').classList.remove('active');
@@ -1640,16 +1647,15 @@ function closeMenus() {
   hideOverlay();
   activeMessageId = null;
 }
-// スレッド・APP・常駐アイテム用：長押し(550ms)でメニュー（従来通り）
+// スレッド・APP・常駐アイテム用：長押し(600ms)でメニュー
 function addLongPress(el, cb) {
-  // タッチ座標を事前にキャプチャ（タイマー発火時にtouches[]は消えているため）
-  let lx = 0, ly = 0;
+  let lx = 0, ly = 0, t = null; // ローカルタイマー（グローバルlpTimerの干渉を避ける）
   el.addEventListener('touchstart', e => {
     lx = e.touches[0].clientX; ly = e.touches[0].clientY;
-    lpTimer = setTimeout(() => cb({ clientX: lx, clientY: ly }), 550);
+    t = setTimeout(() => { t = null; cb({ clientX: lx, clientY: ly }); }, 600);
   }, { passive: true });
-  el.addEventListener('touchend',   () => clearTimeout(lpTimer), { passive: true });
-  el.addEventListener('touchmove',  () => clearTimeout(lpTimer), { passive: true });
+  el.addEventListener('touchend',   () => { clearTimeout(t); t = null; }, { passive: true });
+  el.addEventListener('touchmove',  () => { clearTimeout(t); t = null; }, { passive: true });
   el.addEventListener('contextmenu', e => { e.preventDefault(); cb(e); });
 }
 
