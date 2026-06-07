@@ -1616,11 +1616,20 @@ function positionMenu(el, x, y, offsetY = 0) {
 }
 function showOverlay(cb) {
   $('overlay').classList.add('active');
-  $('overlay').onclick = () => { hideOverlay(); if (cb) cb(); };
+  let done = false;
+  const handle = e => {
+    if (done) return;
+    done = true;
+    e.preventDefault();   // ghost click 防止
+    hideOverlay();
+    if (cb) cb();
+  };
+  // touchend で即時反応（300ms遅延なし）、PCはclickで対応
+  $('overlay').addEventListener('touchend', handle, { once: true, passive: false });
+  $('overlay').addEventListener('click',    handle, { once: true });
 }
 function hideOverlay() {
   $('overlay').classList.remove('active');
-  $('overlay').onclick = null;
 }
 function closeMenus() {
   $('context-menu').classList.remove('active');

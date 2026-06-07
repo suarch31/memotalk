@@ -1,4 +1,4 @@
-const CACHE = 'memotalk-v17';
+const CACHE = 'memotalk-v18';
 const ASSETS = [
   './index.html', './style.css', './app.js',
   './manifest.json', './manifest-sakura.json',
