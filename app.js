@@ -476,7 +476,10 @@ async function runSync(showMsg) {
       applyRemote(cloud);
     }
     await pushNow();
-    if (showMsg) showToast('☁️ 同期完了');
+    if (showMsg) {
+      showToast('☁️ 同期完了 — 再起動します...');
+      setTimeout(() => location.reload(), 1500); // 同期後に自動リロード
+    }
   } catch (e) {
     if (showMsg) showToast('同期失敗: ' + (e.code || e.message));
   }
@@ -1616,21 +1619,22 @@ function positionMenu(el, x, y, offsetY = 0) {
 }
 function showOverlay(cb) {
   const ov = $('overlay');
+  ov.ontouchend = null;
+  ov.onclick    = null;
   ov.classList.add('active');
-  // ontouchend/onclick の代入方式で重複リスナーを防ぐ
-  ov.ontouchend = e => {
-    e.preventDefault();
-    ov.ontouchend = null;
-    ov.onclick    = null;
-    ov.classList.remove('active');
-    if (cb) cb();
-  };
-  ov.onclick = () => {
-    ov.ontouchend = null;
-    ov.onclick    = null;
-    ov.classList.remove('active');
-    if (cb) cb();
-  };
+  // 50ms遅延: 長押し後に指を離したtouchendがすぐオーバーレイに届かないようにする
+  setTimeout(() => {
+    if (!ov.classList.contains('active')) return; // その間に閉じられていたら何もしない
+    const close = e => {
+      if (e && e.cancelable) e.preventDefault();
+      ov.ontouchend = null;
+      ov.onclick    = null;
+      ov.classList.remove('active');
+      if (cb) cb();
+    };
+    ov.ontouchend = close;
+    ov.onclick    = close;
+  }, 50);
 }
 function hideOverlay() {
   const ov = $('overlay');
@@ -1649,14 +1653,18 @@ function closeMenus() {
 }
 // スレッド・APP・常駐アイテム用：長押し(600ms)でメニュー
 function addLongPress(el, cb) {
-  let lx = 0, ly = 0, t = null; // ローカルタイマー（グローバルlpTimerの干渉を避ける）
+  let lx = 0, ly = 0, t = null;
   el.addEventListener('touchstart', e => {
+    if (e.touches.length > 1) return;
     lx = e.touches[0].clientX; ly = e.touches[0].clientY;
     t = setTimeout(() => { t = null; cb({ clientX: lx, clientY: ly }); }, 600);
   }, { passive: true });
-  el.addEventListener('touchend',   () => { clearTimeout(t); t = null; }, { passive: true });
-  el.addEventListener('touchmove',  () => { clearTimeout(t); t = null; }, { passive: true });
-  el.addEventListener('contextmenu', e => { e.preventDefault(); cb(e); });
+  const cancel = () => { clearTimeout(t); t = null; };
+  el.addEventListener('touchend',    cancel, { passive: true });
+  el.addEventListener('touchmove',   cancel, { passive: true });
+  el.addEventListener('touchcancel', cancel, { passive: true });
+  // contextmenu は使わない（setTimeoutとの二重発火を防ぐため）
+  el.addEventListener('contextmenu', e => e.preventDefault());
 }
 
 // ⑤ メッセージバブル専用
