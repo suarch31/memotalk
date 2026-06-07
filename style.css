@@ -592,12 +592,19 @@ html, body {
   background: #fff;
   border-radius: 16px;
   padding: 24px;
+  position: relative;
   width: 88%;
   max-width: 340px;
   box-shadow: 0 8px 32px rgba(0,0,0,.2);
 }
 .modal-wide { max-width: 420px; }
 .modal-content h3 { font-size: 18px; margin-bottom: 16px; text-align: center; color: #333; }
+.modal-close-x {
+  position: absolute; top: 10px; right: 14px;
+  background: none; border: none;
+  font-size: 18px; color: #999; cursor: pointer; padding: 4px 8px;
+}
+.modal-close-x:active { color: #333; }
 .modal-content input {
   width: 100%;
   border: 1px solid #ddd;

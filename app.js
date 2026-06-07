@@ -918,6 +918,7 @@ function showRenameModal(current, cb) {
   const m = document.createElement('div');
   m.className = 'modal active';
   m.innerHTML = `<div class="modal-content">
+    <button class="modal-close-x">✕</button>
     <h3>名前を変更</h3>
     <input type="text" id="_rin" value="${esc(current)}" maxlength="50">
     <div class="modal-buttons">
@@ -929,22 +930,27 @@ function showRenameModal(current, cb) {
   setupModalBackdrop(m);
   const inp = m.querySelector('#_rin');
   setTimeout(() => { inp.focus(); inp.select(); }, 50);
+  m.querySelector('.modal-close-x').onclick = () => m.remove();
   m.querySelector('.btn-cancel').onclick = () => m.remove();
   const ok = () => { const v = inp.value.trim(); if (v) cb(v); m.remove(); };
   m.querySelector('.btn-ok').onclick = ok;
   inp.addEventListener('keypress', e => { if (e.key === 'Enter') ok(); });
 }
 
-// モーダルの外タップ確実に閉じる共通関数
-// → modal-content内のイベントは伝播を止め、backdrop側(m本体)はすべて閉じる
+// モーダルの外タップで閉じる（確実版）
+// modal-content内はすべてのポインター系イベントの伝播を止める
+// backdrop(m本体)はpointerdown/touchstart/clickのいずれかで即閉じる
 function setupModalBackdrop(m) {
   const content = m.querySelector('.modal-content');
-  // modal-content内のタップはmodalに伝播させない
-  content.addEventListener('click',    e => e.stopPropagation());
-  content.addEventListener('touchend', e => e.stopPropagation());
-  // backdrop（外側）タップで閉じる
-  m.addEventListener('click',    () => m.remove());
-  m.addEventListener('touchend', e => { e.preventDefault(); m.remove(); });
+  const stopAll = e => e.stopPropagation();
+  ['pointerdown','touchstart','touchend','click'].forEach(ev =>
+    content.addEventListener(ev, stopAll)
+  );
+  let closed = false;
+  const closeModal = () => { if (!closed) { closed = true; m.remove(); } };
+  m.addEventListener('pointerdown', closeModal);
+  m.addEventListener('touchstart',  closeModal, { passive: true });
+  m.addEventListener('click',       closeModal);
 }
 
 // ================= APPタブ =================
