@@ -906,13 +906,10 @@ function showThreadColorPicker(t) {
     </div>
   </div>`;
   document.body.appendChild(m);
-  m.addEventListener('click', e => { if (e.target === m) m.remove(); }); // 外タップで閉じる
+  setupModalBackdrop(m);
   m.querySelector('.btn-cancel').onclick = () => m.remove();
   m.querySelectorAll('[data-c]').forEach(el => {
-    el.onclick = () => {
-      t.color = el.dataset.c;
-      save(); renderThreads(); m.remove();
-    };
+    el.onclick = () => { t.color = el.dataset.c; save(); renderThreads(); m.remove(); };
   });
 }
 
@@ -929,13 +926,25 @@ function showRenameModal(current, cb) {
     </div>
   </div>`;
   document.body.appendChild(m);
-  m.addEventListener('click', e => { if (e.target === m) m.remove(); }); // ② 外タップで閉じる
+  setupModalBackdrop(m);
   const inp = m.querySelector('#_rin');
   setTimeout(() => { inp.focus(); inp.select(); }, 50);
   m.querySelector('.btn-cancel').onclick = () => m.remove();
   const ok = () => { const v = inp.value.trim(); if (v) cb(v); m.remove(); };
   m.querySelector('.btn-ok').onclick = ok;
   inp.addEventListener('keypress', e => { if (e.key === 'Enter') ok(); });
+}
+
+// モーダルの外タップ確実に閉じる共通関数
+// → modal-content内のイベントは伝播を止め、backdrop側(m本体)はすべて閉じる
+function setupModalBackdrop(m) {
+  const content = m.querySelector('.modal-content');
+  // modal-content内のタップはmodalに伝播させない
+  content.addEventListener('click',    e => e.stopPropagation());
+  content.addEventListener('touchend', e => e.stopPropagation());
+  // backdrop（外側）タップで閉じる
+  m.addEventListener('click',    () => m.remove());
+  m.addEventListener('touchend', e => { e.preventDefault(); m.remove(); });
 }
 
 // ================= APPタブ =================
