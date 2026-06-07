@@ -1626,6 +1626,8 @@ function closeMenus() {
   $('context-menu').classList.remove('active');
   $('reaction-menu').classList.remove('active');
   $('color-menu').classList.remove('active');
+  // 動的に生成したスレッド/APPメニューもすべて削除
+  document.querySelectorAll('body > .context-menu').forEach(m => m.remove());
   hideOverlay();
   activeMessageId = null;
 }
