@@ -1442,7 +1442,8 @@ function showDayEntryMenu(id, e) {
       <div class="color-swatch green"  data-color="green"></div>
       <div class="color-swatch blue"   data-color="blue"></div>
       <div class="color-swatch yellow" data-color="yellow"></div>
-      <div class="color-swatch red"    data-color="red"></div>`;
+      <div class="color-swatch red"    data-color="red"></div>
+      <div class="color-swatch gray"   data-color="gray"></div>`;
     document.body.appendChild(cm);
     showOverlay(() => cm.remove());
     cm.querySelectorAll('.color-swatch').forEach(s => {
@@ -1619,28 +1620,30 @@ function positionMenu(el, x, y, offsetY = 0) {
 }
 function showOverlay(cb) {
   const ov = $('overlay');
-  ov.ontouchend = null;
-  ov.onclick    = null;
+  ov.ontouchstart = null;
+  ov.onclick      = null;
   ov.classList.add('active');
-  // 50ms遅延: 長押し後に指を離したtouchendがすぐオーバーレイに届かないようにする
-  setTimeout(() => {
-    if (!ov.classList.contains('active')) return; // その間に閉じられていたら何もしない
-    const close = e => {
-      if (e && e.cancelable) e.preventDefault();
-      ov.ontouchend = null;
-      ov.onclick    = null;
-      ov.classList.remove('active');
-      if (cb) cb();
-    };
-    ov.ontouchend = close;
-    ov.onclick    = close;
-  }, 50);
+  // touchstart = 新しく指が触れた時だけ発火（長押し後の指離しtouchendとは別）
+  ov.ontouchstart = e => {
+    if (e.touches.length > 1) return; // 多指タッチは無視
+    e.preventDefault(); // ghost click防止
+    ov.ontouchstart = null;
+    ov.onclick      = null;
+    ov.classList.remove('active');
+    if (cb) cb();
+  };
+  ov.onclick = () => { // PCフォールバック
+    ov.ontouchstart = null;
+    ov.onclick      = null;
+    ov.classList.remove('active');
+    if (cb) cb();
+  };
 }
 function hideOverlay() {
   const ov = $('overlay');
   ov.classList.remove('active');
-  ov.ontouchend = null;
-  ov.onclick    = null;
+  ov.ontouchstart = null;
+  ov.onclick      = null;
 }
 function closeMenus() {
   $('context-menu').classList.remove('active');
