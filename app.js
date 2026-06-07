@@ -155,7 +155,7 @@ function renderThreads() {
     const preview = last ? (last.type === 'image' ? '📷 画像' : last.content.replace(/\n/g,' ')) : 'メッセージなし';
     return `<div class="thread-item${t.pinned ? ' pinned' : ''}" data-id="${t.id}">
       ${t.pinned ? '<span class="pin-badge">📌</span>' : ''}
-      <div class="thread-avatar">${esc(t.name.charAt(0))}</div>
+      <div class="thread-avatar tc-${t.color || 'green'}">${esc(t.name.charAt(0))}</div>
       <div class="thread-info">
         <div class="thread-name">${highlight(t.name, memoQuery)}</div>
         <div class="thread-preview">${highlight(preview, memoQuery)}</div>
@@ -180,7 +180,8 @@ function showThreadMenu(threadId, e) {
   positionMenu(menu, e.clientX ?? e.pageX, e.clientY ?? e.pageY);
   menu.innerHTML = `
     <button class="ctx-btn" data-a="pin">${t.pinned ? '📌 ピン留めを外す' : '📌 ピン留め'}</button>
-    <button class="ctx-btn" data-a="rename">名前を変更</button>
+    <button class="ctx-btn" data-a="rename">✏️ 名前を変更</button>
+    <button class="ctx-btn" data-a="color">🎨 色を変更</button>
     <button class="ctx-btn ctx-delete" data-a="delete">削除</button>`;
   document.body.appendChild(menu);
   showOverlay(() => menu.remove());
@@ -192,6 +193,10 @@ function showThreadMenu(threadId, e) {
   menu.querySelector('[data-a=rename]').onclick = () => {
     hideOverlay(); menu.remove();
     showRenameModal(t.name, name => { t.name = name; save(); renderThreads(); });
+  };
+  menu.querySelector('[data-a=color]').onclick = () => {
+    hideOverlay(); menu.remove();
+    showThreadColorPicker(t);
   };
   menu.querySelector('[data-a=delete]').onclick = () => {
     hideOverlay(); menu.remove();
@@ -829,7 +834,7 @@ $('new-thread-name').addEventListener('keypress', e => { if (e.key === 'Enter') 
 
 function createThread() {
   const name = $('new-thread-name').value.trim(); if (!name) return;
-  const t = { id: uid(), name, pinned: false, createdAt: Date.now(), updatedAt: Date.now() };
+  const t = { id: uid(), name, pinned: false, color: 'green', createdAt: Date.now(), updatedAt: Date.now() };
   db.threads.push(t);
   db.messages[t.id] = [];
   save();
@@ -877,6 +882,41 @@ $('btn-edit-thread').onclick = () => {
   };
 };
 
+// ① スレッドの色変更ピッカー
+function showThreadColorPicker(t) {
+  const COLORS = [
+    { key: 'green',  label: '緑', bg: '#00B900' },
+    { key: 'blue',   label: '青', bg: '#4A9EFF' },
+    { key: 'yellow', label: '黄', bg: '#FFB300' },
+    { key: 'red',    label: '赤', bg: '#FF6B6B' },
+    { key: 'gray',   label: '灰', bg: '#9E9E9E' },
+  ];
+  const m = document.createElement('div');
+  m.className = 'modal active';
+  m.innerHTML = `<div class="modal-content">
+    <h3>色を変更</h3>
+    <div class="color-row" style="justify-content:center; gap:16px; padding:12px 0;">
+      ${COLORS.map(c => `
+        <div class="color-swatch ${c.key} ${(t.color||'green')===c.key?'selected':''}"
+             data-c="${c.key}" title="${c.label}"
+             style="width:40px;height:40px;"></div>`).join('')}
+    </div>
+    <div class="modal-buttons">
+      <button class="btn-cancel">キャンセル</button>
+    </div>
+  </div>`;
+  document.body.appendChild(m);
+  m.addEventListener('click', e => { if (e.target === m) m.remove(); }); // 外タップで閉じる
+  m.querySelector('.btn-cancel').onclick = () => m.remove();
+  m.querySelectorAll('[data-c]').forEach(el => {
+    el.onclick = () => {
+      t.color = el.dataset.c;
+      save(); renderThreads(); m.remove();
+    };
+  });
+}
+
+// ② 名前変更モーダル（外タップで閉じる）
 function showRenameModal(current, cb) {
   const m = document.createElement('div');
   m.className = 'modal active';
@@ -889,6 +929,7 @@ function showRenameModal(current, cb) {
     </div>
   </div>`;
   document.body.appendChild(m);
+  m.addEventListener('click', e => { if (e.target === m) m.remove(); }); // ② 外タップで閉じる
   const inp = m.querySelector('#_rin');
   setTimeout(() => { inp.focus(); inp.select(); }, 50);
   m.querySelector('.btn-cancel').onclick = () => m.remove();

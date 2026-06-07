@@ -391,6 +391,14 @@ html, body {
 .color-blue   { background: #4A9EFF; color: #fff; }
 .color-yellow { background: #FFD93D; color: #111; }
 .color-red    { background: #FF6B6B; color: #fff; }
+.color-gray   { background: #B0B0B0; color: #fff; }
+
+/* スレッドアバター色 */
+.thread-avatar.tc-green  { background: #00B900; }
+.thread-avatar.tc-blue   { background: #4A9EFF; }
+.thread-avatar.tc-yellow { background: #FFB300; color: #111; }
+.thread-avatar.tc-red    { background: #FF6B6B; }
+.thread-avatar.tc-gray   { background: #9E9E9E; }
 
 /* 検索ハイライト */
 .search-hit { background: #fff59d; padding: 0 2px; border-radius: 2px; color: #222; }
