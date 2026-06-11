@@ -184,22 +184,44 @@ function showThreadMenu(threadId, e) {
     <button class="ctx-btn" data-a="color">🎨 色を変更</button>
     <button class="ctx-btn ctx-delete" data-a="delete">削除</button>`;
   document.body.appendChild(menu);
-  showOverlay(() => menu.remove());
+
+  // ── 暗幕は「見た目のみ」でタッチを通過させる ──────────────────
+  // pointer-events:none にすることでオーバーレイがタッチを吸収しない。
+  // メニュー外タッチ → 即閉じ＋タッチがそのまま下の要素に届く
+  // （2回目の長押しも・・・ボタンも1タップで反応する）
+  const ov = $('overlay');
+  ov.style.pointerEvents = 'none';
+  ov.classList.add('active');
+
+  const cleanup = () => {
+    document.removeEventListener('touchstart', outsideTap, true);
+    document.removeEventListener('click',      outsideTap, true);
+    ov.classList.remove('active');
+    ov.style.pointerEvents = '';
+    if (menu.parentNode) menu.remove();
+  };
+  const outsideTap = ev => {
+    if (menu.contains(ev.target)) return; // メニュー内タップは無視
+    cleanup();
+  };
+  // キャプチャフェーズで登録: メニュー外の全タッチを先に受け取る
+  document.addEventListener('touchstart', outsideTap, { capture: true, passive: true });
+  document.addEventListener('click',      outsideTap, true); // PCフォールバック
 
   menu.querySelector('[data-a=pin]').onclick = () => {
-    hideOverlay(); menu.remove();
+    cleanup();
     t.pinned = !t.pinned; save(); renderThreads();
   };
   menu.querySelector('[data-a=rename]').onclick = () => {
-    hideOverlay(); menu.remove();
+    cleanup();
     showRenameModal(t.name, name => { t.name = name; save(); renderThreads(); });
   };
   menu.querySelector('[data-a=color]').onclick = () => {
-    hideOverlay(); menu.remove();
+    cleanup();
     showThreadColorPicker(t);
   };
   menu.querySelector('[data-a=delete]').onclick = () => {
-    hideOverlay(); menu.remove();
+    cleanup();
     if (confirm(`「${t.name}」を削除しますか？`)) {
       db.threads = db.threads.filter(x => x.id !== threadId);
       delete db.messages[threadId];
@@ -1643,8 +1665,9 @@ function showOverlay(cb) {
 function hideOverlay() {
   const ov = $('overlay');
   ov.classList.remove('active');
-  ov.ontouchstart = null;
-  ov.onclick      = null;
+  ov.ontouchstart    = null;
+  ov.onclick         = null;
+  ov.style.pointerEvents = ''; // pointer-events:none が残らないようリセット
 }
 function closeMenus() {
   $('context-menu').classList.remove('active');
