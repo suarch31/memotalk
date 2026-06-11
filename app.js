@@ -184,8 +184,7 @@ function showThreadMenu(threadId, e) {
     <button class="ctx-btn" data-a="color">🎨 色を変更</button>
     <button class="ctx-btn ctx-delete" data-a="delete">削除</button>`;
   document.body.appendChild(menu);
-  // オーバーレイ外タップ→キャンセル後もrenderThreadsでDOM再生成（長押し再発火のため）
-  showOverlay(() => { menu.remove(); renderThreads(); });
+  showOverlay(() => menu.remove());
 
   menu.querySelector('[data-a=pin]').onclick = () => {
     hideOverlay(); menu.remove();
@@ -910,9 +909,8 @@ function showThreadColorPicker(t) {
     </div>
   </div>`;
   document.body.appendChild(m);
-  // キャンセル・外タップ後もrenderThreadsでDOM再生成（長押し再発火のため）
-  setupModalBackdrop(m, renderThreads);
-  m.querySelector('.btn-cancel').onclick = () => { m.remove(); renderThreads(); };
+  setupModalBackdrop(m);
+  m.querySelector('.btn-cancel').onclick = () => m.remove();
   m.querySelectorAll('[data-c]').forEach(el => {
     el.onclick = () => { t.color = el.dataset.c; save(); renderThreads(); m.remove(); };
   });
