@@ -104,6 +104,7 @@ let editingAppId       = null;
 let editingResidentId  = null;
 let memoQuery          = '';
 let appQuery           = '';
+let _menuDismissedAt   = 0;   // スレッドメニュー消去時刻（openThread誤発火防止）
 
 // ================= DOM =================
 const $ = id => document.getElementById(id);
@@ -167,7 +168,11 @@ function renderThreads() {
   }).join('');
 
   $('thread-list').querySelectorAll('.thread-item').forEach(el => {
-    el.onclick = () => openThread(el.dataset.id);
+    el.onclick = () => {
+      // メニューを消した直後（500ms以内）のclickは無視（openThread誤発火防止）
+      if (Date.now() - _menuDismissedAt < 500) return;
+      openThread(el.dataset.id);
+    };
     // 長押しはdocument-levelハンドラで処理（要素レベルはAndroid固まり問題あり）
   });
 }
@@ -199,6 +204,7 @@ function showThreadMenu(threadId, e) {
     ov.classList.remove('active');
     ov.style.pointerEvents = '';
     if (menu.parentNode) menu.remove();
+    _menuDismissedAt = Date.now(); // 直後のclickでopenThreadが走らないよう記録
   };
   const outsideTap = ev => {
     if (menu.contains(ev.target)) return; // メニュー内タップは無視
@@ -1725,9 +1731,20 @@ function addLongPress(el, cb) {
     if (Math.hypot(e.touches[0].clientX - _x, e.touches[0].clientY - _y) > 10) cancel();
   }, { passive: true });
 
-  // スレッドアイテム上ではブラウザのネイティブ長押しメニューを抑制
+  // contextmenu = Androidが長押しを検知したシグナル。
+  // このイベントの直後にtouchcancelが来てタイマーを打ち消すことがある（2回目以降に顕著）。
+  // そのため contextmenu 発火時点でメニューを表示し、touchcancelより先に処理を完了させる。
   document.addEventListener('contextmenu', e => {
-    if (e.target.closest('#thread-list .thread-item')) e.preventDefault();
+    const el = e.target.closest('#thread-list .thread-item');
+    if (!el) return;
+    e.preventDefault(); // ネイティブ長押しメニューを抑制
+    if (_t !== null) {
+      // タイマーがまだ動いている（メニュー未表示）→ タイマーをキャンセルしてここで表示
+      clearTimeout(_t); _t = null; _el = null;
+      if (navigator.vibrate) navigator.vibrate(30);
+      showThreadMenu(el.dataset.id, { clientX: e.clientX, clientY: e.clientY });
+    }
+    // _t === null の場合: タイマーがすでに発火済み(表示済み) or キャンセル済み → 何もしない
   });
 })();
 
