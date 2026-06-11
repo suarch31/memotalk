@@ -105,6 +105,7 @@ let editingResidentId  = null;
 let memoQuery          = '';
 let appQuery           = '';
 let _menuDismissedAt   = 0;   // スレッドメニュー消去時刻（openThread誤発火防止）
+let _lpFired           = false; // 長押し直後フラグ（長押し後のゴーストクリック防止）
 
 // ================= DOM =================
 const $ = id => document.getElementById(id);
@@ -169,7 +170,9 @@ function renderThreads() {
 
   $('thread-list').querySelectorAll('.thread-item').forEach(el => {
     el.onclick = () => {
-      // メニューを消した直後（500ms以内）のclickは無視（openThread誤発火防止）
+      // 長押し直後のゴーストクリックを無視（openThread誤発火防止）
+      if (_lpFired) { _lpFired = false; return; }
+      // メニューを消した直後（500ms以内）のclickも無視
       if (Date.now() - _menuDismissedAt < 500) return;
       openThread(el.dataset.id);
     };
@@ -190,21 +193,15 @@ function showThreadMenu(threadId, e) {
     <button class="ctx-btn ctx-delete" data-a="delete">削除</button>`;
   document.body.appendChild(menu);
 
-  // ── 暗幕は「見た目のみ」でタッチを通過させる ──────────────────
-  // pointer-events:none にすることでオーバーレイがタッチを吸収しない。
-  // メニュー外タッチ → 即閉じ＋タッチがそのまま下の要素に届く
-  // （2回目の長押しも・・・ボタンも1タップで反応する）
-  const ov = $('overlay');
-  ov.style.pointerEvents = 'none';
-  ov.classList.add('active');
-
+  // ── オーバーレイなし：キャプチャリスナーのみでメニュー外タップを検出 ──
+  // pointer-events:none の overlay は Android Chrome によっては
+  // 下のボタンにタップが届かない不具合があるため使用しない
   const cleanup = () => {
     document.removeEventListener('touchstart', outsideTap, true);
     document.removeEventListener('click',      outsideTap, true);
-    ov.classList.remove('active');
-    ov.style.pointerEvents = '';
     if (menu.parentNode) menu.remove();
-    _menuDismissedAt = Date.now(); // 直後のclickでopenThreadが走らないよう記録
+    _lpFired       = false;          // 長押しフラグをリセット
+    _menuDismissedAt = Date.now();   // 直後のclickでopenThreadが走らないよう記録
   };
   const outsideTap = ev => {
     if (menu.contains(ev.target)) return; // メニュー内タップは無視
@@ -1682,6 +1679,7 @@ function closeMenus() {
   // 動的に生成したスレッド/APPメニューもすべて削除
   document.querySelectorAll('body > .context-menu').forEach(m => m.remove());
   hideOverlay();
+  _lpFired = false; // 長押しフラグをリセット
   activeMessageId = null;
 }
 // スレッド・APP・常駐アイテム用：長押し(600ms)でメニュー
@@ -1719,7 +1717,11 @@ function addLongPress(el, cb) {
     clearTimeout(_t);
     _t = setTimeout(() => {
       _t = null;
-      if (_el) showThreadMenu(_el.dataset.id, { clientX: _x, clientY: _y });
+      if (_el) {
+        _lpFired = true; // 長押し確定：直後のゴーストクリックを抑制
+        if (navigator.vibrate) navigator.vibrate(30);
+        showThreadMenu(_el.dataset.id, { clientX: _x, clientY: _y });
+      }
     }, 600);
   }, { passive: true });
 
@@ -1741,6 +1743,7 @@ function addLongPress(el, cb) {
     if (_t !== null) {
       // タイマーがまだ動いている（メニュー未表示）→ タイマーをキャンセルしてここで表示
       clearTimeout(_t); _t = null; _el = null;
+      _lpFired = true; // 長押し確定：直後のゴーストクリックを抑制
       if (navigator.vibrate) navigator.vibrate(30);
       showThreadMenu(el.dataset.id, { clientX: e.clientX, clientY: e.clientY });
     }
