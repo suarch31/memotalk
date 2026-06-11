@@ -184,7 +184,8 @@ function showThreadMenu(threadId, e) {
     <button class="ctx-btn" data-a="color">🎨 色を変更</button>
     <button class="ctx-btn ctx-delete" data-a="delete">削除</button>`;
   document.body.appendChild(menu);
-  showOverlay(() => menu.remove());
+  // オーバーレイ外タップ→キャンセル後もrenderThreadsでDOM再生成（長押し再発火のため）
+  showOverlay(() => { menu.remove(); renderThreads(); });
 
   menu.querySelector('[data-a=pin]').onclick = () => {
     hideOverlay(); menu.remove();
@@ -909,8 +910,9 @@ function showThreadColorPicker(t) {
     </div>
   </div>`;
   document.body.appendChild(m);
-  setupModalBackdrop(m);
-  m.querySelector('.btn-cancel').onclick = () => m.remove();
+  // キャンセル・外タップ後もrenderThreadsでDOM再生成（長押し再発火のため）
+  setupModalBackdrop(m, renderThreads);
+  m.querySelector('.btn-cancel').onclick = () => { m.remove(); renderThreads(); };
   m.querySelectorAll('[data-c]').forEach(el => {
     el.onclick = () => { t.color = el.dataset.c; save(); renderThreads(); m.remove(); };
   });
@@ -943,14 +945,15 @@ function showRenameModal(current, cb) {
 // モーダルの外タップで閉じる（確実版）
 // modal-content内はすべてのポインター系イベントの伝播を止める
 // backdrop(m本体)はpointerdown/touchstart/clickのいずれかで即閉じる
-function setupModalBackdrop(m) {
+// onClose: キャンセル時（外タップ含む）に追加で呼ぶコールバック（省略可）
+function setupModalBackdrop(m, onClose) {
   const content = m.querySelector('.modal-content');
   const stopAll = e => e.stopPropagation();
   ['pointerdown','touchstart','touchend','click'].forEach(ev =>
     content.addEventListener(ev, stopAll)
   );
   let closed = false;
-  const closeModal = () => { if (!closed) { closed = true; m.remove(); } };
+  const closeModal = () => { if (!closed) { closed = true; m.remove(); if (onClose) onClose(); } };
   m.addEventListener('pointerdown', closeModal);
   m.addEventListener('touchstart',  closeModal, { passive: true });
   m.addEventListener('click',       closeModal);
