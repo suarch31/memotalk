@@ -170,7 +170,6 @@ html, body {
   transition: background .1s;
   user-select: none;
   position: relative;
-  touch-action: pan-y;           /* ブラウザの長押し処理を無効化 */
   -webkit-touch-callout: none;   /* iOS Safariのコールアウト防止 */
 }
 .thread-item:active { background: #f0f0f0; }

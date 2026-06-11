@@ -168,7 +168,7 @@ function renderThreads() {
 
   $('thread-list').querySelectorAll('.thread-item').forEach(el => {
     el.onclick = () => openThread(el.dataset.id);
-    addLongPress(el, e => showThreadMenu(el.dataset.id, e));
+    // 長押しはdocument-levelハンドラで処理（要素レベルはAndroid固まり問題あり）
   });
 }
 
@@ -1658,6 +1658,7 @@ function closeMenus() {
   activeMessageId = null;
 }
 // スレッド・APP・常駐アイテム用：長押し(600ms)でメニュー
+// ※ 現在スレッドはdocument-levelハンドラに移行済み（下を参照）
 function addLongPress(el, cb) {
   let lx = 0, ly = 0, t = null;
   el.addEventListener('touchstart', e => {
@@ -1669,9 +1670,45 @@ function addLongPress(el, cb) {
   el.addEventListener('touchend',    cancel, { passive: true });
   el.addEventListener('touchmove',   cancel, { passive: true });
   el.addEventListener('touchcancel', cancel, { passive: true });
-  // contextmenu は使わない（setTimeoutとの二重発火を防ぐため）
   el.addEventListener('contextmenu', e => e.preventDefault());
 }
+
+// =====================================================
+// スレッド長押し：document-levelで一括検出（v23）
+// 要素レベルのtouchstartはAndroid Chromeで一度長押しすると
+// タッチ状態が内部的に固まり2回目が発火しなくなる問題があるため
+// documentレベルで拾えばその問題を回避できる
+// =====================================================
+(function () {
+  let _t = null, _x = 0, _y = 0, _el = null;
+
+  document.addEventListener('touchstart', e => {
+    if (e.touches.length > 1) return;
+    const el = e.target.closest('#thread-list .thread-item');
+    if (!el) return;
+    _el = el;
+    _x  = e.touches[0].clientX;
+    _y  = e.touches[0].clientY;
+    clearTimeout(_t);
+    _t = setTimeout(() => {
+      _t = null;
+      if (_el) showThreadMenu(_el.dataset.id, { clientX: _x, clientY: _y });
+    }, 600);
+  }, { passive: true });
+
+  const cancel = () => { clearTimeout(_t); _t = null; _el = null; };
+  document.addEventListener('touchend',    cancel, { passive: true });
+  document.addEventListener('touchcancel', cancel, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (_t === null || !e.touches.length) return;
+    if (Math.hypot(e.touches[0].clientX - _x, e.touches[0].clientY - _y) > 10) cancel();
+  }, { passive: true });
+
+  // スレッドアイテム上ではブラウザのネイティブ長押しメニューを抑制
+  document.addEventListener('contextmenu', e => {
+    if (e.target.closest('#thread-list .thread-item')) e.preventDefault();
+  });
+})();
 
 // ⑤ メッセージバブル専用
 //   〜500ms 長押し → OSのネイティブ文字選択（範囲ハンドルで部分選択可）
