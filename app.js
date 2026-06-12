@@ -1721,7 +1721,7 @@ function addLongPress(el, cb) {
     clearTimeout(_t);
     _t = setTimeout(() => {
       _t = null;
-      if (_el && !document.querySelector('body > .context-menu')) {
+      if (_el && !document.querySelector('body > .context-menu.active')) {
         if (navigator.vibrate) navigator.vibrate(30);
         showThreadMenu(_el.dataset.id, { clientX: _x, clientY: _y });
       }
@@ -1747,7 +1747,7 @@ function addLongPress(el, cb) {
     // touchcancelでタイマーが消えていても contextmenu は確実に長押し検知なので常に表示
     clearTimeout(_t); _t = null; _el = null;
     // すでに表示中なら二重表示しない（タイマーが先に発火した場合）
-    if (document.querySelector('body > .context-menu')) return;
+    if (document.querySelector('body > .context-menu.active')) return;
     if (navigator.vibrate) navigator.vibrate(30);
     showThreadMenu(el.dataset.id, { clientX: e.clientX, clientY: e.clientY });
     // _lpFired = true はshowThreadMenu内で設定済み
