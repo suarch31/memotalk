@@ -192,6 +192,7 @@ function showThreadMenu(threadId, e) {
     <button class="ctx-btn" data-a="color">🎨 色を変更</button>
     <button class="ctx-btn ctx-delete" data-a="delete">削除</button>`;
   document.body.appendChild(menu);
+  _lpFired = true; // ← closeMenus()の後に設定（closeMenusで上書きされないよう）
 
   // ── オーバーレイなし：キャプチャリスナーのみでメニュー外タップを検出 ──
   // pointer-events:none の overlay は Android Chrome によっては
@@ -1679,7 +1680,6 @@ function closeMenus() {
   // 動的に生成したスレッド/APPメニューもすべて削除
   document.querySelectorAll('body > .context-menu').forEach(m => m.remove());
   hideOverlay();
-  _lpFired = false; // 長押しフラグをリセット
   activeMessageId = null;
 }
 // スレッド・APP・常駐アイテム用：長押し(600ms)でメニュー
@@ -1718,9 +1718,9 @@ function addLongPress(el, cb) {
     _t = setTimeout(() => {
       _t = null;
       if (_el) {
-        _lpFired = true; // 長押し確定：直後のゴーストクリックを抑制
         if (navigator.vibrate) navigator.vibrate(30);
         showThreadMenu(_el.dataset.id, { clientX: _x, clientY: _y });
+        // _lpFired = true はshowThreadMenu内のappendChild後に設定済み
       }
     }, 600);
   }, { passive: true });
@@ -1740,14 +1740,13 @@ function addLongPress(el, cb) {
     const el = e.target.closest('#thread-list .thread-item');
     if (!el) return;
     e.preventDefault(); // ネイティブ長押しメニューを抑制
-    if (_t !== null) {
-      // タイマーがまだ動いている（メニュー未表示）→ タイマーをキャンセルしてここで表示
-      clearTimeout(_t); _t = null; _el = null;
-      _lpFired = true; // 長押し確定：直後のゴーストクリックを抑制
-      if (navigator.vibrate) navigator.vibrate(30);
-      showThreadMenu(el.dataset.id, { clientX: e.clientX, clientY: e.clientY });
-    }
-    // _t === null の場合: タイマーがすでに発火済み(表示済み) or キャンセル済み → 何もしない
+    // touchcancelでタイマーが消えていても contextmenu は確実に長押し検知なので常に表示
+    clearTimeout(_t); _t = null; _el = null;
+    // すでに表示中なら二重表示しない（タイマーが先に発火した場合）
+    if (document.querySelector('body > .context-menu')) return;
+    if (navigator.vibrate) navigator.vibrate(30);
+    showThreadMenu(el.dataset.id, { clientX: e.clientX, clientY: e.clientY });
+    // _lpFired = true はshowThreadMenu内で設定済み
   });
 })();
 
