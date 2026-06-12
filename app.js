@@ -1716,17 +1716,17 @@ function addLongPress(el, cb) {
     clearTimeout(_t);
     _t = setTimeout(() => {
       _t = null;
-      if (_el) {
+      if (_el && !document.querySelector('body > .context-menu')) {
         if (navigator.vibrate) navigator.vibrate(30);
         showThreadMenu(_el.dataset.id, { clientX: _x, clientY: _y });
-        // _lpFired = true はshowThreadMenu内のappendChild後に設定済み
       }
     }, 600);
   }, { passive: true });
 
+  // touchcancelは無視する: Androidでは長押し直後にtouchcancelが発火してタイマーを
+  // 消してしまう。スクロールキャンセルはtouchmoveの10px判定で十分。
   const cancel = () => { clearTimeout(_t); _t = null; _el = null; };
-  document.addEventListener('touchend',    cancel, { passive: true });
-  document.addEventListener('touchcancel', cancel, { passive: true });
+  document.addEventListener('touchend', cancel, { passive: true });
   document.addEventListener('touchmove', e => {
     if (_t === null || !e.touches.length) return;
     if (Math.hypot(e.touches[0].clientX - _x, e.touches[0].clientY - _y) > 10) cancel();
