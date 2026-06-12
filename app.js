@@ -1681,8 +1681,10 @@ function closeMenus() {
   $('context-menu').classList.remove('active');
   $('reaction-menu').classList.remove('active');
   $('color-menu').classList.remove('active');
-  // 動的に生成したスレッド/APPメニューもすべて削除
-  document.querySelectorAll('body > .context-menu').forEach(m => m.remove());
+  // 動的に生成したスレッド/APPメニューを削除（静的な #context-menu は残す）
+  document.querySelectorAll('body > .context-menu').forEach(m => {
+    if (m.id !== 'context-menu') m.remove();
+  });
   hideOverlay();
   activeMessageId = null;
 }
