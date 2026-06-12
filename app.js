@@ -886,7 +886,8 @@ $('btn-edit-thread').onclick = () => {
   positionMenu(menu, window.innerWidth - 200, 60);
   menu.innerHTML = `
     <button class="ctx-btn" data-a="pin">${t.pinned ? '📌 ピン留めを外す' : '📌 ピン留め'}</button>
-    <button class="ctx-btn" data-a="rename">名前を変更</button>
+    <button class="ctx-btn" data-a="rename">✏️ 名前を変更</button>
+    <button class="ctx-btn" data-a="color">🎨 色を変更</button>
     <button class="ctx-btn ctx-delete" data-a="delete">スレッドを削除</button>`;
   document.body.appendChild(menu);
   showOverlay(() => menu.remove());
@@ -898,6 +899,10 @@ $('btn-edit-thread').onclick = () => {
   menu.querySelector('[data-a=rename]').onclick = () => {
     hideOverlay(); menu.remove();
     showRenameModal(t.name, name => { t.name = name; $('chat-title').textContent = name; save(); });
+  };
+  menu.querySelector('[data-a=color]').onclick = () => {
+    hideOverlay(); menu.remove();
+    showThreadColorPicker(t);
   };
   menu.querySelector('[data-a=delete]').onclick = () => {
     hideOverlay(); menu.remove();
