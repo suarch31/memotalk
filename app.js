@@ -199,7 +199,6 @@ function showThreadMenu(threadId, e) {
   // 下のボタンにタップが届かない不具合があるため使用しない
   const cleanup = () => {
     document.removeEventListener('touchstart', outsideTap, true);
-    document.removeEventListener('click',      outsideTap, true);
     if (menu.parentNode) menu.remove();
     _lpFired       = false;          // 長押しフラグをリセット
     _menuDismissedAt = Date.now();   // 直後のclickでopenThreadが走らないよう記録
@@ -208,9 +207,9 @@ function showThreadMenu(threadId, e) {
     if (menu.contains(ev.target)) return; // メニュー内タップは無視
     cleanup();
   };
-  // キャプチャフェーズで登録: メニュー外の全タッチを先に受け取る
+  // touchstartのみ登録（clickは登録しない）
+  // → 長押し後のゴーストclickがclick-outsideTapを誤発火させてメニューを即消ししていたため
   document.addEventListener('touchstart', outsideTap, { capture: true, passive: true });
-  document.addEventListener('click',      outsideTap, true); // PCフォールバック
 
   menu.querySelector('[data-a=pin]').onclick = () => {
     cleanup();
