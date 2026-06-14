@@ -1380,6 +1380,24 @@ $('btn-prev-month').onclick = () => { calCursor.setMonth(calCursor.getMonth() - 
 $('btn-next-month').onclick = () => { calCursor.setMonth(calCursor.getMonth() + 1); renderCalendar(); };
 $('btn-today').onclick      = () => { calCursor = new Date(); calCursor.setDate(1); renderCalendar(); };
 
+// カレンダータブの左右スワイプで月移動
+(function () {
+  let sx = 0, sy = 0;
+  const cal = $('tab-calendar');
+  cal.addEventListener('touchstart', e => {
+    if (e.touches.length > 1) return;
+    sx = e.touches[0].clientX;
+    sy = e.touches[0].clientY;
+  }, { passive: true });
+  cal.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - sx;
+    const dy = e.changedTouches[0].clientY - sy;
+    if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
+    calCursor.setMonth(calCursor.getMonth() + (dx < 0 ? 1 : -1));
+    renderCalendar();
+  }, { passive: true });
+})();
+
 $('btn-cal-menu').onclick = e => {
   closeMenus();
   const menu = document.createElement('div');
