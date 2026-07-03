@@ -392,8 +392,15 @@ function handleAuthChange(user) {
 function fbLogin() {
   if (!fbAuth) { showToast('Firebase未初期化です'); return; }
   const provider = new firebase.auth.GoogleAuthProvider();
-  // スマホはリダイレクト方式（ポップアップ対策）
-  fbAuth.signInWithRedirect(provider).catch(err => {
+  // ポップアップ方式を優先。Android Chromeのリダイレクト方式は
+  // サードパーティストレージ制限によりログイン状態が保存されないことがある。
+  // ポップアップが使えない環境のみリダイレクトにフォールバックする。
+  fbAuth.signInWithPopup(provider).catch(err => {
+    if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') return;
+    if (err.code === 'auth/popup-blocked' || err.code === 'auth/operation-not-supported-in-this-environment') {
+      fbAuth.signInWithRedirect(provider).catch(e2 => showToast('ログイン失敗: ' + e2.message));
+      return;
+    }
     showToast('ログイン失敗: ' + err.message);
   });
 }
@@ -1896,3 +1903,8 @@ applyIconTheme();
 initFirebase();
 setupAutoSync();
 switchTab(db.currentTab || 'memo');
+
+// OSによるサイトデータの自動削除（＝ログアウトやメモ消失）を防ぐ
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().catch(() => {});
+}
