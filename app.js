@@ -1349,11 +1349,10 @@ function renderCalendar() {
   renderCalSums(y, m);
 }
 
-// 黄・青・橙のメモに含まれる数字を月ごとに積算し、曜日欄の下に吹き出しで表示
-// 白・灰は普段は非表示。右端のボタンで「白→灰→白+灰→なし」を切り替えて確認できる
-const SUM_COLORS   = ['yellow', 'blue', 'orange'];
-const EXTRA_LABELS = ['白/灰', '白', '灰', '白+灰'];
-let _sumExtraMode  = 0; // 0:なし 1:白 2:灰 3:白+灰
+// 黄・青・橙のメモに含まれる数字を月ごとに積算し、曜日欄の下に吹き出しで表示（左詰め）
+// 白・灰は普段は非表示。右端の黒●をタップすると白・灰・白+灰を表示、もう一度で非表示
+const SUM_COLORS  = ['yellow', 'blue', 'orange'];
+let _showExtraSums = false;
 function renderCalSums(y, m) {
   const sums  = { yellow: 0, blue: 0, orange: 0, white: 0, gray: 0 };
   const found = { yellow: false, blue: false, orange: false };
@@ -1371,14 +1370,16 @@ function renderCalSums(y, m) {
   let html = SUM_COLORS.filter(c => found[c])
     .map(c => `<span class="cal-sum-bubble color-${c}">${sums[c].toLocaleString()}</span>`)
     .join('');
-  if (_sumExtraMode === 1) html += `<span class="cal-sum-bubble color-white">白 ${sums.white.toLocaleString()}</span>`;
-  if (_sumExtraMode === 2) html += `<span class="cal-sum-bubble color-gray">灰 ${sums.gray.toLocaleString()}</span>`;
-  if (_sumExtraMode === 3) html += `<span class="cal-sum-bubble color-gray">白+灰 ${(sums.white + sums.gray).toLocaleString()}</span>`;
-  html += `<button id="btn-sum-extra" class="cal-sum-toggle">${EXTRA_LABELS[_sumExtraMode]}</button>`;
+  if (_showExtraSums) {
+    html += `<span class="cal-sum-bubble color-white">白 ${sums.white.toLocaleString()}</span>`;
+    html += `<span class="cal-sum-bubble color-gray">灰 ${sums.gray.toLocaleString()}</span>`;
+    html += `<span class="cal-sum-bubble color-gray">白+灰 ${(sums.white + sums.gray).toLocaleString()}</span>`;
+  }
+  html += `<button id="btn-sum-extra" class="cal-sum-dot${_showExtraSums ? ' on' : ''}" title="白・灰の合計を表示"></button>`;
   const box = $('cal-sums');
   box.innerHTML = html;
   box.classList.add('active');
-  $('btn-sum-extra').onclick = () => { _sumExtraMode = (_sumExtraMode + 1) % 4; renderCalSums(y, m); };
+  $('btn-sum-extra').onclick = () => { _showExtraSums = !_showExtraSums; renderCalSums(y, m); };
 }
 
 function renderCalCell(date, otherMonth, todayKey) {
