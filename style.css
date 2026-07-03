@@ -764,6 +764,17 @@ html, body {
   font-weight: 700;
   box-shadow: 0 1px 3px rgba(0,0,0,.15);
 }
+/* 白・灰の合計表示切替ボタン */
+.cal-sum-toggle {
+  border: 1px solid #ccc;
+  background: #fff;
+  color: #888;
+  border-radius: 14px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+}
 
 .cal-grid {
   flex: 1;
@@ -854,6 +865,8 @@ html, body {
   box-shadow: 0 1px 3px rgba(0,0,0,.1);
 }
 .stamp-chip:active { transform: scale(.95); }
+.stamp-chip.legend { cursor: default; }
+.stamp-chip.legend:active { transform: none; }
 .stamp-chip-add {
   background: #fff;
   color: #888;

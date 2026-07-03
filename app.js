@@ -1350,27 +1350,35 @@ function renderCalendar() {
 }
 
 // 黄・青・橙のメモに含まれる数字を月ごとに積算し、曜日欄の下に吹き出しで表示
-const SUM_COLORS = ['yellow', 'blue', 'orange'];
+// 白・灰は普段は非表示。右端のボタンで「白→灰→白+灰→なし」を切り替えて確認できる
+const SUM_COLORS   = ['yellow', 'blue', 'orange'];
+const EXTRA_LABELS = ['白/灰', '白', '灰', '白+灰'];
+let _sumExtraMode  = 0; // 0:なし 1:白 2:灰 3:白+灰
 function renderCalSums(y, m) {
-  const sums  = { yellow: 0, blue: 0, orange: 0 };
+  const sums  = { yellow: 0, blue: 0, orange: 0, white: 0, gray: 0 };
   const found = { yellow: false, blue: false, orange: false };
   Object.keys(db.calendar).forEach(key => {
     const d = parseKey(key);
     if (d.getFullYear() !== y || d.getMonth() !== m) return;
     (db.calendar[key] || []).forEach(en => {
-      if (!SUM_COLORS.includes(en.color)) return;
+      if (!(en.color in sums)) return;
       const nums = String(en.content).replace(/,/g, '').match(/-?\d+(?:\.\d+)?/g);
       if (!nums) return;
       nums.forEach(n => { sums[en.color] += parseFloat(n); });
       found[en.color] = true;
     });
   });
-  const box = $('cal-sums');
-  const html = SUM_COLORS.filter(c => found[c])
+  let html = SUM_COLORS.filter(c => found[c])
     .map(c => `<span class="cal-sum-bubble color-${c}">${sums[c].toLocaleString()}</span>`)
     .join('');
+  if (_sumExtraMode === 1) html += `<span class="cal-sum-bubble color-white">白 ${sums.white.toLocaleString()}</span>`;
+  if (_sumExtraMode === 2) html += `<span class="cal-sum-bubble color-gray">灰 ${sums.gray.toLocaleString()}</span>`;
+  if (_sumExtraMode === 3) html += `<span class="cal-sum-bubble color-gray">白+灰 ${(sums.white + sums.gray).toLocaleString()}</span>`;
+  html += `<button id="btn-sum-extra" class="cal-sum-toggle">${EXTRA_LABELS[_sumExtraMode]}</button>`;
+  const box = $('cal-sums');
   box.innerHTML = html;
-  box.classList.toggle('active', !!html);
+  box.classList.add('active');
+  $('btn-sum-extra').onclick = () => { _sumExtraMode = (_sumExtraMode + 1) % 4; renderCalSums(y, m); };
 }
 
 function renderCalCell(date, otherMonth, todayKey) {
@@ -1453,18 +1461,12 @@ function openDay(key) {
   selectDayColor('green');
 }
 
+// 二行目：積算カテゴリの凡例（タップ不可・表示のみ）
 function renderStampBar() {
-  let html = '';
-  db.stamps.forEach(s => {
-    html += `<button class="stamp-chip color-${s.color}" data-id="${s.id}">${esc(s.text)}</button>`;
-  });
-  html += `<button class="stamp-chip stamp-chip-add" id="btn-stamp-add">＋ 管理</button>`;
-  $('stamp-bar').innerHTML = html;
-
-  $('stamp-bar').querySelectorAll('[data-id]').forEach(b => {
-    b.onclick = () => applyStamp(b.dataset.id);
-  });
-  $('btn-stamp-add').onclick = openStampManager;
+  $('stamp-bar').innerHTML = `
+    <span class="stamp-chip legend color-yellow">お金</span>
+    <span class="stamp-chip legend color-blue">RUN</span>
+    <span class="stamp-chip legend color-orange">筋トレ</span>`;
 }
 
 function applyStamp(stampId) {
@@ -1552,11 +1554,17 @@ function addDayEntry(content, color, stampId) {
   save(); renderDayEntries(); renderCalendar();
 }
 
+// 上段5色（黄・青・橙・白・灰）は積算対象のため数字のみ入力可
+const NUMERIC_COLORS = ['yellow', 'blue', 'orange', 'white', 'gray'];
 function selectDayColor(c) {
   _dayColor = c;
   document.querySelectorAll('#cal-day-color-picker .color-swatch').forEach(s => {
     s.classList.toggle('selected', s.dataset.color === c);
   });
+  const inp = $('cal-day-input');
+  const numeric = NUMERIC_COLORS.includes(c);
+  inp.inputMode = numeric ? 'decimal' : '';
+  inp.placeholder = numeric ? '数字を入力...' : 'メモを入力...';
 }
 document.querySelectorAll('#cal-day-color-picker .color-swatch').forEach(s => {
   s.onclick = () => selectDayColor(s.dataset.color);
@@ -1565,6 +1573,10 @@ document.querySelectorAll('#cal-day-color-picker .color-swatch').forEach(s => {
 $('btn-cal-day-send').onclick = () => {
   const t = $('cal-day-input').value.trim();
   if (!t) return;
+  if (NUMERIC_COLORS.includes(_dayColor) && !/^-?[\d,]+(\.\d+)?$/.test(t)) {
+    alert('この色は数字のみ入力できます（積算対象の色です）');
+    return;
+  }
   addDayEntry(t, _dayColor, null);
   $('cal-day-input').value = '';
   $('cal-day-input').style.height = 'auto';

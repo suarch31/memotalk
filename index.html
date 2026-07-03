@@ -288,15 +288,17 @@
   <div class="input-area">
     <textarea id="cal-day-input" placeholder="メモを入力..." rows="1"></textarea>
     <div id="cal-day-color-picker" class="inline-color-picker">
-      <div class="color-swatch red"    data-color="red"></div>
-      <div class="color-swatch orange" data-color="orange"></div>
+      <!-- 上段：積算対象（数字のみ入力可） -->
       <div class="color-swatch yellow" data-color="yellow"></div>
-      <div class="color-swatch green selected" data-color="green"></div>
       <div class="color-swatch blue"   data-color="blue"></div>
-      <div class="color-swatch indigo" data-color="indigo"></div>
-      <div class="color-swatch purple" data-color="purple"></div>
+      <div class="color-swatch orange" data-color="orange"></div>
       <div class="color-swatch white"  data-color="white"></div>
       <div class="color-swatch gray"   data-color="gray"></div>
+      <!-- 下段：通常メモ用 -->
+      <div class="color-swatch red"    data-color="red"></div>
+      <div class="color-swatch green selected" data-color="green"></div>
+      <div class="color-swatch indigo" data-color="indigo"></div>
+      <div class="color-swatch purple" data-color="purple"></div>
     </div>
     <button id="btn-cal-day-send" class="send-btn">追加</button>
   </div>
