@@ -1345,6 +1345,32 @@ function renderCalendar() {
   $('cal-grid').querySelectorAll('.cal-cell').forEach(el => {
     el.onclick = () => openDay(el.dataset.key);
   });
+
+  renderCalSums(y, m);
+}
+
+// 黄・青・橙のメモに含まれる数字を月ごとに積算し、曜日欄の下に吹き出しで表示
+const SUM_COLORS = ['yellow', 'blue', 'orange'];
+function renderCalSums(y, m) {
+  const sums  = { yellow: 0, blue: 0, orange: 0 };
+  const found = { yellow: false, blue: false, orange: false };
+  Object.keys(db.calendar).forEach(key => {
+    const d = parseKey(key);
+    if (d.getFullYear() !== y || d.getMonth() !== m) return;
+    (db.calendar[key] || []).forEach(en => {
+      if (!SUM_COLORS.includes(en.color)) return;
+      const nums = String(en.content).replace(/,/g, '').match(/-?\d+(?:\.\d+)?/g);
+      if (!nums) return;
+      nums.forEach(n => { sums[en.color] += parseFloat(n); });
+      found[en.color] = true;
+    });
+  });
+  const box = $('cal-sums');
+  const html = SUM_COLORS.filter(c => found[c])
+    .map(c => `<span class="cal-sum-bubble color-${c}">${sums[c].toLocaleString()}</span>`)
+    .join('');
+  box.innerHTML = html;
+  box.classList.toggle('active', !!html);
 }
 
 function renderCalCell(date, otherMonth, todayKey) {
@@ -1488,10 +1514,14 @@ function showDayEntryMenu(id, e) {
     cm.className = 'color-menu active';
     positionMenu(cm, ev.clientX, ev.clientY);
     cm.innerHTML = `
+      <div class="color-swatch red"    data-color="red"></div>
+      <div class="color-swatch orange" data-color="orange"></div>
+      <div class="color-swatch yellow" data-color="yellow"></div>
       <div class="color-swatch green"  data-color="green"></div>
       <div class="color-swatch blue"   data-color="blue"></div>
-      <div class="color-swatch yellow" data-color="yellow"></div>
-      <div class="color-swatch red"    data-color="red"></div>
+      <div class="color-swatch indigo" data-color="indigo"></div>
+      <div class="color-swatch purple" data-color="purple"></div>
+      <div class="color-swatch white"  data-color="white"></div>
       <div class="color-swatch gray"   data-color="gray"></div>`;
     document.body.appendChild(cm);
     showOverlay(() => cm.remove());

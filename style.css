@@ -393,6 +393,10 @@ html, body {
 .color-yellow { background: #FFD93D; color: #111; }
 .color-red    { background: #FF6B6B; color: #fff; }
 .color-gray   { background: #B0B0B0; color: #fff; }
+.color-orange { background: #FF9500; color: #111; }
+.color-indigo { background: #5C6BC0; color: #fff; }
+.color-purple { background: #AB47BC; color: #fff; }
+.color-white  { background: #FFFFFF; color: #111; border: 1px solid #ddd; }
 
 /* スレッドアバター色 */
 .thread-avatar.tc-green  { background: #00B900; }
@@ -547,7 +551,7 @@ html, body {
 }
 .btn-danger:active { background: #ffeaea; }
 
-.color-row { display: flex; gap: 12px; padding: 6px 0; }
+.color-row { display: flex; gap: 12px; padding: 6px 0; flex-wrap: wrap; }
 .color-row .color-swatch { width: 36px; height: 36px; border: 3px solid transparent; }
 .color-row .color-swatch.selected { border-color: #333; transform: scale(1.1); }
 .color-row .color-swatch.gray { background: #9E9E9E; }
@@ -695,7 +699,7 @@ html, body {
 }
 .reaction-btn:active { background: #f0f0f0; }
 
-.color-menu { gap: 10px; padding: 12px 16px; border-radius: 30px; }
+.color-menu { gap: 10px; padding: 12px 16px; border-radius: 24px; flex-wrap: wrap; max-width: 216px; }
 .color-swatch {
   width: 34px; height: 34px;
   border-radius: 50%;
@@ -709,6 +713,10 @@ html, body {
 .color-swatch.yellow  { background: #FFD93D; }
 .color-swatch.red     { background: #FF6B6B; }
 .color-swatch.gray    { background: #9E9E9E; }
+.color-swatch.orange  { background: #FF9500; }
+.color-swatch.indigo  { background: #5C6BC0; }
+.color-swatch.purple  { background: #AB47BC; }
+.color-swatch.white   { background: #FFFFFF; border-color: #ccc; }
 
 .overlay {
   display: none;
@@ -735,6 +743,27 @@ html, body {
 }
 .cal-wd.sun { color: #e53935; }
 .cal-wd.sat { color: #1e88e5; }
+
+/* 月間積算表示（黄・青・橙の数値合計を吹き出しで表示） */
+.cal-sums {
+  display: none;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 5px 8px;
+  background: #fafafa;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+.cal-sums.active { display: flex; }
+.cal-sum-bubble {
+  border-radius: 14px;
+  padding: 3px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0,0,0,.15);
+}
 
 .cal-grid {
   flex: 1;
@@ -856,15 +885,16 @@ html, body {
 
 /* インラインカラーピッカー（入力欄横） */
 .inline-color-picker {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(5, auto);
   gap: 4px;
   align-items: center;
   padding: 0 4px;
   flex-shrink: 0;
 }
 .inline-color-picker .color-swatch {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   border-width: 2px;
 }
 .inline-color-picker .color-swatch.selected {
