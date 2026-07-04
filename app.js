@@ -303,9 +303,13 @@ function renderSyncSettings() {
     $('acct-avatar').innerHTML  = '?';
     $('acct-name').textContent  = '未ログイン';
     $('acct-mail').textContent  = fbAuth ? 'Googleでログインしてください' : 'Firebase未接続';
-    $('btn-sync-login').style.display  = 'block';
+    // Google公式ボタン（GIS）が使えるならそちらを表示、無理なら従来ボタン
+    const gsiOk = setupGsiButton();
+    $('gsi-button').style.display      = gsiOk ? 'block' : 'none';
+    $('btn-sync-login').style.display  = gsiOk ? 'none' : 'block';
     $('btn-sync-logout').style.display = 'none';
   }
+  if (s.user) $('gsi-button').style.display = 'none';
   // モード
   $('sync-mode-manual').checked = (s.mode || 'manual') === 'manual';
   $('sync-mode-auto5').checked  = s.mode === 'auto5';
@@ -387,6 +391,34 @@ function handleAuthChange(user) {
   if ($('screen-settings').classList.contains('active')) {
     renderSyncSettings();
   }
+}
+
+// Google Identity Services（GIS）の公式ボタン。
+// ポップアップ／リダイレクト方式がAndroid PWAで失敗する問題を回避できる。
+// IDトークンを直接受け取り signInWithCredential でFirebaseにログインする。
+let _gsiInited = false;
+function setupGsiButton() {
+  if (typeof google === 'undefined' || !google.accounts ||
+      typeof GOOGLE_CLIENT_ID === 'undefined' || !GOOGLE_CLIENT_ID || !fbAuth) return false;
+  if (!_gsiInited) {
+    try {
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: resp => {
+          const cred = firebase.auth.GoogleAuthProvider.credential(resp.credential);
+          fbAuth.signInWithCredential(cred).catch(err => showToast('ログイン失敗: ' + err.message));
+        }
+      });
+      google.accounts.id.renderButton($('gsi-button'), {
+        type: 'standard', size: 'large', text: 'signin_with', shape: 'pill', width: 280
+      });
+      _gsiInited = true;
+    } catch (e) {
+      console.error('GIS初期化失敗', e);
+      return false;
+    }
+  }
+  return true;
 }
 
 function fbLogin() {
