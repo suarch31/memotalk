@@ -126,10 +126,21 @@ function switchTab(name) {
 }
 
 // ================= メモタブ =================
+// スレッド色ソートの優先順（赤→灰。逆順はこの反対）
+const THREAD_COLOR_ORDER = ['red','orange','yellow','green','blue','indigo','purple','black','white','gray'];
+
 function renderThreads() {
   let list = [...db.threads];
+  const colorIdx = c => {
+    const i = THREAD_COLOR_ORDER.indexOf(c || 'green');
+    return i < 0 ? 99 : i;
+  };
   list.sort((a,b) => {
     if (!!b.pinned !== !!a.pinned) return (b.pinned?1:0) - (a.pinned?1:0);
+    if (db.threadSort === 'color-asc' || db.threadSort === 'color-desc') {
+      const d = colorIdx(a.color) - colorIdx(b.color);
+      if (d) return db.threadSort === 'color-asc' ? d : -d;
+    }
     return b.updatedAt - a.updatedAt;
   });
 
@@ -253,17 +264,21 @@ function closeSearch(which) {
 }
 
 // メニュー（エクスポート/インポート）
-$('btn-memo-menu').onclick = e => showGlobalMenu(e);
+$('btn-memo-menu').onclick = e => showGlobalMenu(e, true);
 $('btn-app-menu').onclick = e => showAppViewMenu(e);
 $('btn-resident-menu').onclick = e => showGlobalMenu(e);
 
-function showGlobalMenu(e) {
+function showGlobalMenu(e, withSort) {
   closeMenus();
   const menu = document.createElement('div');
   menu.className = 'context-menu active';
   positionMenu(menu, window.innerWidth - 200, 56);
   const themeLabel = db.iconTheme === 'sakura' ? '🌸 桜' : '🌾 麻';
-  menu.innerHTML = `
+  const sorted = db.threadSort === 'color-asc' || db.threadSort === 'color-desc';
+  const sortItems = withSort ? `
+    <button class="ctx-btn" data-a="sort">🌈 色でソート${db.threadSort === 'color-asc' ? '（→逆順）' : ''}</button>
+    ${sorted ? '<button class="ctx-btn" data-a="unsort">↕️ 標準の並びに戻す</button>' : ''}` : '';
+  menu.innerHTML = `${sortItems}
     <button class="ctx-btn" data-a="sync">☁️ 同期設定</button>
     <button class="ctx-btn" data-a="theme">🎨 アイコン色 (${themeLabel})</button>
     <button class="ctx-btn" data-a="export">📥 エクスポート</button>
@@ -271,6 +286,22 @@ function showGlobalMenu(e) {
   document.body.appendChild(menu);
   showOverlay(() => menu.remove());
 
+  if (withSort) {
+    menu.querySelector('[data-a=sort]').onclick = () => {
+      hideOverlay(); menu.remove();
+      // タップごとに 赤→灰 と 灰→赤 を切り替える
+      db.threadSort = db.threadSort === 'color-asc' ? 'color-desc' : 'color-asc';
+      save(); renderThreads();
+      showToast(db.threadSort === 'color-asc' ? '🌈 色順（赤→灰）でソート' : '🌈 色順（灰→赤）でソート');
+    };
+    const un = menu.querySelector('[data-a=unsort]');
+    if (un) un.onclick = () => {
+      hideOverlay(); menu.remove();
+      db.threadSort = null;
+      save(); renderThreads();
+      showToast('↕️ 標準の並び（更新順）に戻しました');
+    };
+  }
   menu.querySelector('[data-a=sync]').onclick   = () => { hideOverlay(); menu.remove(); openSyncSettings(); };
   menu.querySelector('[data-a=theme]').onclick  = () => { hideOverlay(); menu.remove(); openIconThemeDialog(); };
   menu.querySelector('[data-a=export]').onclick = () => { hideOverlay(); menu.remove(); doExport(); };
@@ -1389,11 +1420,10 @@ function renderCalendar() {
 }
 
 // 黄・青・橙のメモに含まれる数字を月ごとに積算し、曜日欄の下に吹き出しで表示（左詰め）
-// 白・灰は普段は非表示。右端の黒●をタップすると白・灰・白+灰を表示、もう一度で非表示
-const SUM_COLORS  = ['yellow', 'blue', 'orange'];
-let _showExtraSums = false;
+// 右端の黒●をタップするとスプレッドシート調の集計画面（月別×色別）へ
+const SUM_COLORS = ['yellow', 'blue', 'orange'];
 function renderCalSums(y, m) {
-  const sums  = { yellow: 0, blue: 0, orange: 0, white: 0, gray: 0 };
+  const sums  = { yellow: 0, blue: 0, orange: 0 };
   const found = { yellow: false, blue: false, orange: false };
   Object.keys(db.calendar).forEach(key => {
     const d = parseKey(key);
@@ -1409,17 +1439,74 @@ function renderCalSums(y, m) {
   let html = SUM_COLORS.filter(c => found[c])
     .map(c => `<span class="cal-sum-bubble color-${c}">${sums[c].toLocaleString()}</span>`)
     .join('');
-  if (_showExtraSums) {
-    html += `<span class="cal-sum-bubble color-white">白 ${sums.white.toLocaleString()}</span>`;
-    html += `<span class="cal-sum-bubble color-gray">灰 ${sums.gray.toLocaleString()}</span>`;
-    html += `<span class="cal-sum-bubble color-gray">白+灰 ${(sums.white + sums.gray).toLocaleString()}</span>`;
-  }
-  html += `<button id="btn-sum-extra" class="cal-sum-dot${_showExtraSums ? ' on' : ''}" title="白・灰の合計を表示"></button>`;
+  html += `<button id="btn-sum-extra" class="cal-sum-dot" title="集計表を表示"></button>`;
   const box = $('cal-sums');
   box.innerHTML = html;
   box.classList.add('active');
-  $('btn-sum-extra').onclick = () => { _showExtraSums = !_showExtraSums; renderCalSums(y, m); };
+  $('btn-sum-extra').onclick = () => openCalSummary(y, m);
 }
+
+// ================= カレンダー集計画面（スプレッドシート調） =================
+const SUMMARY_COLS = [
+  { key: 'yellow', label: 'お金' },
+  { key: 'blue',   label: 'RUN' },
+  { key: 'orange', label: '筋トレ' },
+  { key: 'white',  label: '白' },
+  { key: 'gray',   label: '灰' },
+];
+let _sumYear = null, _sumOrigYear = null, _sumOrigMonth = null;
+
+function openCalSummary(y, m) {
+  _sumYear = y; _sumOrigYear = y; _sumOrigMonth = m;
+  $('main-view').classList.remove('active');
+  $('screen-cal-summary').classList.add('active');
+  renderCalSummary();
+}
+
+function renderCalSummary() {
+  const y = _sumYear;
+  $('cal-summary-title').textContent = `${y}年 集計`;
+
+  // 月別×色別に数字を積算
+  const monthly = Array.from({ length: 12 }, () => ({ yellow:0, blue:0, orange:0, white:0, gray:0 }));
+  Object.keys(db.calendar).forEach(key => {
+    const d = parseKey(key);
+    if (d.getFullYear() !== y) return;
+    (db.calendar[key] || []).forEach(en => {
+      if (!(en.color in monthly[0])) return;
+      const nums = String(en.content).replace(/,/g, '').match(/-?\d+(?:\.\d+)?/g);
+      if (!nums) return;
+      nums.forEach(n => { monthly[d.getMonth()][en.color] += parseFloat(n); });
+    });
+  });
+  const yearTotal = { yellow:0, blue:0, orange:0, white:0, gray:0 };
+  monthly.forEach(mo => SUMMARY_COLS.forEach(c => { yearTotal[c.key] += mo[c.key]; }));
+
+  const fmt = v => v ? v.toLocaleString() : '';
+  let html = '<table class="sum-table"><thead><tr><th></th>';
+  SUMMARY_COLS.forEach(c => {
+    html += `<th><span class="cal-sum-bubble color-${c.key}">${c.label}</span></th>`;
+  });
+  html += '</tr></thead><tbody>';
+  for (let i = 0; i < 12; i++) {
+    const cur = (y === _sumOrigYear && i === _sumOrigMonth) ? ' class="cur"' : '';
+    html += `<tr${cur}><td>${i+1}月</td>`;
+    SUMMARY_COLS.forEach(c => { html += `<td>${fmt(monthly[i][c.key])}</td>`; });
+    html += '</tr>';
+  }
+  html += '<tr class="total"><td>年合計</td>';
+  SUMMARY_COLS.forEach(c => { html += `<td>${fmt(yearTotal[c.key])}</td>`; });
+  html += '</tr></tbody></table>';
+
+  $('cal-summary-body').innerHTML = html;
+}
+
+$('btn-back-cal-summary').onclick = () => {
+  $('screen-cal-summary').classList.remove('active');
+  $('main-view').classList.add('active');
+};
+$('btn-sum-prev-year').onclick = () => { _sumYear--; renderCalSummary(); };
+$('btn-sum-next-year').onclick = () => { _sumYear++; renderCalSummary(); };
 
 function renderCalCell(date, otherMonth, todayKey) {
   const key = dateKey(date.getFullYear(), date.getMonth(), date.getDate());
