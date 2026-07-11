@@ -988,11 +988,15 @@ $('btn-edit-thread').onclick = () => {
 // ① スレッドの色変更ピッカー
 function showThreadColorPicker(t) {
   const COLORS = [
-    { key: 'green',  label: '緑', bg: '#00B900' },
-    { key: 'blue',   label: '青', bg: '#4A9EFF' },
-    { key: 'yellow', label: '黄', bg: '#FFB300' },
-    { key: 'red',    label: '赤', bg: '#FF6B6B' },
-    { key: 'gray',   label: '灰', bg: '#9E9E9E' },
+    { key: 'red',    label: '赤' },
+    { key: 'orange', label: '橙' },
+    { key: 'yellow', label: '黄' },
+    { key: 'green',  label: '緑' },
+    { key: 'blue',   label: '青' },
+    { key: 'indigo', label: '藍' },
+    { key: 'purple', label: '紫' },
+    { key: 'white',  label: '白' },
+    { key: 'gray',   label: '灰' },
   ];
   const m = document.createElement('div');
   m.className = 'modal active';
@@ -1485,7 +1489,7 @@ function renderCalSummary() {
   const fmt = v => v ? v.toLocaleString() : '';
   let html = '<table class="sum-table"><thead><tr><th></th>';
   SUMMARY_COLS.forEach(c => {
-    html += `<th><span class="cal-sum-bubble color-${c.key}">${c.label}</span></th>`;
+    html += `<th><button class="cal-sum-bubble sum-col-btn color-${c.key}" data-c="${c.key}">${c.label}</button></th>`;
   });
   html += '</tr></thead><tbody>';
   for (let i = 0; i < 12; i++) {
@@ -1499,7 +1503,94 @@ function renderCalSummary() {
   html += '</tr></tbody></table>';
 
   $('cal-summary-body').innerHTML = html;
+  // 色アイコンをタップ → その色の棒グラフ画面へ
+  $('cal-summary-body').querySelectorAll('.sum-col-btn').forEach(b => {
+    b.onclick = () => openCalGraph(b.dataset.c);
+  });
 }
+
+// ================= 棒グラフ画面（累計×目標ペース線） =================
+let _graphColor = null;
+
+function openCalGraph(colorKey) {
+  _graphColor = colorKey;
+  $('screen-cal-summary').classList.remove('active');
+  $('screen-cal-graph').classList.add('active');
+  renderCalGraph();
+}
+
+function renderCalGraph() {
+  const y = _sumYear;
+  const col = SUMMARY_COLS.find(c => c.key === _graphColor) || { label: '' };
+  $('cal-graph-title').textContent = `${y}年 ${col.label}`;
+
+  // 月別合計 → 1月からの累計に変換
+  const monthly = new Array(12).fill(0);
+  Object.keys(db.calendar).forEach(key => {
+    const d = parseKey(key);
+    if (d.getFullYear() !== y) return;
+    (db.calendar[key] || []).forEach(en => {
+      if (en.color !== _graphColor) return;
+      const nums = String(en.content).replace(/,/g, '').match(/-?\d+(?:\.\d+)?/g);
+      if (!nums) return;
+      nums.forEach(n => { monthly[d.getMonth()] += parseFloat(n); });
+    });
+  });
+  const cum = [];
+  monthly.reduce((acc, v, i) => (cum[i] = acc + v), 0);
+
+  const target = (db.calTargets || {})[_graphColor] || 0;
+  $('cal-target-input').value = target ? target.toLocaleString() : '';
+
+  // SVGで描画
+  const W = 360, H = 260, padL = 48, padR = 12, padT = 16, padB = 24;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const maxV = Math.max(target, ...cum, 1);
+  const xAt = i => padL + plotW * i / 12;              // 月の境界（0〜12）
+  const yAt = v => padT + plotH * (1 - v / maxV);
+  const barW = plotW / 12 * 0.62;
+  const fmtShort = v => (Math.round(v * 10) / 10).toLocaleString();
+
+  const BAR_FILL = { yellow: '#FFD93D', blue: '#4A9EFF', orange: '#FF9500', white: '#FFFFFF', gray: '#B0B0B0' };
+  let grid = '';
+  [0, maxV / 2, maxV].forEach(v => {
+    grid += `<line x1="${padL}" y1="${yAt(v)}" x2="${W - padR}" y2="${yAt(v)}" stroke="#eee"/>`;
+    grid += `<text x="${padL - 5}" y="${yAt(v) + 3}" font-size="9" text-anchor="end" fill="#666">${fmtShort(v)}</text>`;
+  });
+  let bars = '';
+  for (let i = 0; i < 12; i++) {
+    const bx = xAt(i) + (plotW / 12 - barW) / 2;
+    const by = yAt(cum[i]);
+    bars += `<rect x="${bx}" y="${by}" width="${barW}" height="${Math.max(0, padT + plotH - by)}" fill="${BAR_FILL[_graphColor] || '#999'}" stroke="rgba(0,0,0,.15)" rx="2"/>`;
+    bars += `<text x="${xAt(i) + plotW / 24}" y="${H - 8}" font-size="9" text-anchor="middle" fill="#666">${i + 1}</text>`;
+  }
+  // 目標ペース線：原点(0)から12月末に目標値へ届く比例直線
+  let tline = '';
+  if (target > 0) {
+    tline = `<line x1="${xAt(0)}" y1="${yAt(0)}" x2="${xAt(12)}" y2="${yAt(target)}" stroke="#e53935" stroke-width="2" stroke-dasharray="6 3"/>
+      <text x="${xAt(12) - 4}" y="${Math.max(12, yAt(target) - 7)}" font-size="10" text-anchor="end" fill="#e53935">目標 ${target.toLocaleString()}</text>`;
+  }
+  $('cal-graph-body').innerHTML = `
+    <div class="cal-graph-note">棒＝1月からの累計${target > 0 ? '　／　赤点線＝目標ペース（線より上なら順調）' : ''}</div>
+    <svg viewBox="0 0 ${W} ${H}" class="cal-graph-svg">
+      ${grid}${bars}${tline}
+      <line x1="${padL}" y1="${padT + plotH}" x2="${W - padR}" y2="${padT + plotH}" stroke="#999"/>
+    </svg>`;
+}
+
+$('btn-back-cal-graph').onclick = () => {
+  $('screen-cal-graph').classList.remove('active');
+  $('screen-cal-summary').classList.add('active');
+};
+$('btn-save-target').onclick = () => {
+  const t = $('cal-target-input').value.trim().replace(/,/g, '');
+  if (t && !/^\d+(\.\d+)?$/.test(t)) { alert('数字を入力してください'); return; }
+  if (!db.calTargets) db.calTargets = {};
+  db.calTargets[_graphColor] = t ? parseFloat(t) : null;
+  save();
+  renderCalGraph();
+  showToast(t ? `🎯 年間目標値を ${parseFloat(t).toLocaleString()} に設定` : '年間目標値を削除しました');
+};
 
 $('btn-back-cal-summary').onclick = () => {
   $('screen-cal-summary').classList.remove('active');
