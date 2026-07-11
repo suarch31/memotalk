@@ -312,6 +312,7 @@ function showGlobalMenu(e, withSort) {
 let autoSyncTimer = null;
 
 function openSyncSettings() {
+  navPush();
   $('main-view').classList.remove('active');
   $('screen-settings').classList.add('active');
   renderSyncSettings();
@@ -348,10 +349,7 @@ function renderSyncSettings() {
   $('sync-last').textContent = s.lastSync ? fmtFull(s.lastSync) : '未同期';
 }
 
-$('btn-back-settings').onclick = () => {
-  $('screen-settings').classList.remove('active');
-  $('main-view').classList.add('active');
-};
+$('btn-back-settings').onclick = () => navBack();
 
 document.querySelectorAll('input[name=sync-mode]').forEach(r => {
   r.onchange = () => {
@@ -676,6 +674,7 @@ function openThread(threadId) {
   currentThreadId = threadId;
   const t = db.threads.find(x => x.id === threadId); if (!t) return;
   $('chat-title').textContent = t.name;
+  navPush();
   $('main-view').classList.remove('active');
   $('screen-chat').classList.add('active');
   renderMessages();
@@ -941,12 +940,7 @@ function createThread() {
   openThread(t.id);
 }
 
-$('btn-back').onclick = () => {
-  $('screen-chat').classList.remove('active');
-  $('main-view').classList.add('active');
-  currentThreadId = null;
-  renderThreads();
-};
+$('btn-back').onclick = () => navBack();
 
 $('btn-edit-thread').onclick = () => {
   const t = db.threads.find(x => x.id === currentThreadId); if (!t) return;
@@ -1170,6 +1164,7 @@ function openAppEditor(id) {
   setIconPreview(a?.icon || '📱', a?.iconImage || null, a?.color || 'green');
   selectColorSwatch(a?.color || 'green');
   $('btn-delete-app').style.display = a ? 'block' : 'none';
+  navPush();
   $('main-view').classList.remove('active');
   $('screen-app-edit').classList.add('active');
 }
@@ -1247,7 +1242,7 @@ $('btn-save-app').onclick = () => {
     });
   }
   save();
-  closeAppEditor();
+  navBack();
 };
 
 $('btn-delete-app').onclick = () => {
@@ -1257,11 +1252,11 @@ $('btn-delete-app').onclick = () => {
   if (confirm(`「${a.name}」を削除しますか？`)) {
     db.apps = db.apps.filter(x => x.id !== editingAppId);
     save();
-    closeAppEditor();
+    navBack();
   }
 };
 
-$('btn-back-app').onclick = closeAppEditor;
+$('btn-back-app').onclick = () => navBack();
 function closeAppEditor() {
   $('screen-app-edit').classList.remove('active');
   $('main-view').classList.add('active');
@@ -1310,6 +1305,7 @@ function openResidentEditor(id) {
   $('res-active-input').checked = !!r?.active;
   $('res-lastrun-display').textContent = fmtFull(r?.lastRun);
   $('btn-delete-resident').style.display = r ? 'block' : 'none';
+  navPush();
   $('main-view').classList.remove('active');
   $('screen-resident-edit').classList.add('active');
 }
@@ -1346,7 +1342,7 @@ $('btn-save-resident').onclick = () => {
     });
   }
   save();
-  closeResidentEditor();
+  navBack();
 };
 
 $('btn-delete-resident').onclick = () => {
@@ -1356,11 +1352,11 @@ $('btn-delete-resident').onclick = () => {
   if (confirm(`「${r.name}」を削除しますか？`)) {
     db.residents = db.residents.filter(x => x.id !== editingResidentId);
     save();
-    closeResidentEditor();
+    navBack();
   }
 };
 
-$('btn-back-resident').onclick = closeResidentEditor;
+$('btn-back-resident').onclick = () => navBack();
 function closeResidentEditor() {
   $('screen-resident-edit').classList.remove('active');
   $('main-view').classList.add('active');
@@ -1462,6 +1458,7 @@ let _sumYear = null, _sumOrigYear = null, _sumOrigMonth = null;
 
 function openCalSummary(y, m) {
   _sumYear = y; _sumOrigYear = y; _sumOrigMonth = m;
+  navPush();
   $('main-view').classList.remove('active');
   $('screen-cal-summary').classList.add('active');
   renderCalSummary();
@@ -1514,6 +1511,7 @@ let _graphColor = null;
 
 function openCalGraph(colorKey) {
   _graphColor = colorKey;
+  navPush();
   $('screen-cal-summary').classList.remove('active');
   $('screen-cal-graph').classList.add('active');
   renderCalGraph();
@@ -1578,10 +1576,7 @@ function renderCalGraph() {
     </svg>`;
 }
 
-$('btn-back-cal-graph').onclick = () => {
-  $('screen-cal-graph').classList.remove('active');
-  $('screen-cal-summary').classList.add('active');
-};
+$('btn-back-cal-graph').onclick = () => navBack();
 $('btn-save-target').onclick = () => {
   const t = $('cal-target-input').value.trim().replace(/,/g, '');
   if (t && !/^\d+(\.\d+)?$/.test(t)) { alert('数字を入力してください'); return; }
@@ -1592,10 +1587,7 @@ $('btn-save-target').onclick = () => {
   showToast(t ? `🎯 年間目標値を ${parseFloat(t).toLocaleString()} に設定` : '年間目標値を削除しました');
 };
 
-$('btn-back-cal-summary').onclick = () => {
-  $('screen-cal-summary').classList.remove('active');
-  $('main-view').classList.add('active');
-};
+$('btn-back-cal-summary').onclick = () => navBack();
 $('btn-sum-prev-year').onclick = () => { _sumYear--; renderCalSummary(); };
 $('btn-sum-next-year').onclick = () => { _sumYear++; renderCalSummary(); };
 
@@ -1672,6 +1664,7 @@ function openDay(key) {
   const d = parseKey(key);
   const wd = ['日','月','火','水','木','金','土'][d.getDay()];
   $('cal-day-title').textContent = `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 (${wd})`;
+  navPush();
   $('main-view').classList.remove('active');
   $('screen-cal-day').classList.add('active');
   renderStampBar();
@@ -1811,11 +1804,7 @@ $('cal-day-input').addEventListener('input', () => {
   el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 });
 
-$('btn-back-cal-day').onclick = () => {
-  $('screen-cal-day').classList.remove('active');
-  $('main-view').classList.add('active');
-  currentDateKey = null;
-};
+$('btn-back-cal-day').onclick = () => navBack();
 
 $('btn-cal-day-menu').onclick = e => {
   closeMenus();
@@ -1838,6 +1827,7 @@ $('btn-cal-day-menu').onclick = e => {
 
 // ================= スタンプ管理 =================
 function openStampManager() {
+  navPush();
   $('main-view').classList.remove('active');
   $('screen-cal-day').classList.remove('active');
   $('screen-stamps').classList.add('active');
@@ -1861,16 +1851,7 @@ function renderStampList() {
   });
 }
 
-$('btn-back-stamps').onclick = () => {
-  $('screen-stamps').classList.remove('active');
-  // カレンダー詳細から来た場合はそちらへ、それ以外はメイン
-  if (currentDateKey) {
-    $('screen-cal-day').classList.add('active');
-    renderStampBar();
-  } else {
-    $('main-view').classList.add('active');
-  }
-};
+$('btn-back-stamps').onclick = () => navBack();
 
 $('btn-new-stamp').onclick = () => openStampEditor(null);
 
@@ -2064,6 +2045,82 @@ function addBubbleTap(el, cb) {
   el.addEventListener('touchend',    cancel, { passive: true });
   el.addEventListener('touchcancel', cancel, { passive: true });
   el.addEventListener('contextmenu', e => { e.preventDefault(); cb(e); });
+}
+
+// ================= Android戻るボタン対応 =================
+// サブ画面を開くたびに履歴を1つ積む。端末の戻るボタン／ジェスチャーも
+// アプリ内の←ボタンも popstate に集約し、表示中の画面を1つ閉じる。
+// 階層最上位（タブ画面）では積んだ履歴が無いため、OS標準どおりアプリを抜ける。
+let _navDepth = 0;
+
+function navPush() {
+  _navDepth++;
+  history.pushState({ mtDepth: _navDepth }, '');
+}
+
+// アプリ内←ボタン用。実際のクローズ処理はpopstateハンドラが行う
+function navBack() {
+  if (_navDepth > 0) history.back();
+  else closeTopScreen(); // 保険（通常ここには来ない）
+}
+
+window.addEventListener('popstate', () => {
+  // メニューやモーダルが開いていればそれだけを閉じ、履歴の深さを積み直す
+  const modal = document.querySelector('.modal.active');
+  const menuOpen =
+    document.querySelector('body > .context-menu.active') ||
+    $('context-menu').classList.contains('active') ||
+    $('reaction-menu').classList.contains('active') ||
+    $('color-menu').classList.contains('active') ||
+    $('overlay').classList.contains('active');
+  if (modal || menuOpen) {
+    if (menuOpen) closeMenus();
+    if (modal) {
+      if (modal.id) modal.classList.remove('active'); // HTML固定のモーダル
+      else modal.remove();                            // 動的に生成したモーダル
+    }
+    if (_navDepth > 0) history.pushState({ mtDepth: _navDepth }, '');
+    return;
+  }
+  if (_navDepth > 0) {
+    _navDepth--;
+    closeTopScreen();
+  }
+});
+
+// 表示中の画面を1つ閉じる（上の階層から順に判定）
+function closeTopScreen() {
+  if ($('screen-cal-graph').classList.contains('active')) {
+    $('screen-cal-graph').classList.remove('active');
+    $('screen-cal-summary').classList.add('active');
+  } else if ($('screen-stamps').classList.contains('active')) {
+    $('screen-stamps').classList.remove('active');
+    if (currentDateKey) {           // カレンダー詳細から来た場合はそちらへ
+      $('screen-cal-day').classList.add('active');
+      renderStampBar();
+    } else {
+      $('main-view').classList.add('active');
+    }
+  } else if ($('screen-cal-summary').classList.contains('active')) {
+    $('screen-cal-summary').classList.remove('active');
+    $('main-view').classList.add('active');
+  } else if ($('screen-cal-day').classList.contains('active')) {
+    $('screen-cal-day').classList.remove('active');
+    $('main-view').classList.add('active');
+    currentDateKey = null;
+  } else if ($('screen-chat').classList.contains('active')) {
+    $('screen-chat').classList.remove('active');
+    $('main-view').classList.add('active');
+    currentThreadId = null;
+    renderThreads();
+  } else if ($('screen-settings').classList.contains('active')) {
+    $('screen-settings').classList.remove('active');
+    $('main-view').classList.add('active');
+  } else if ($('screen-app-edit').classList.contains('active')) {
+    closeAppEditor();
+  } else if ($('screen-resident-edit').classList.contains('active')) {
+    closeResidentEditor();
+  }
 }
 
 // ② キーボード表示時に自動スクロールしない（チャット背景固定）
