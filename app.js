@@ -168,7 +168,7 @@ function renderThreads() {
     const preview = last ? (last.type === 'image' ? '📷 画像' : last.content.replace(/\n/g,' ')) : 'メッセージなし';
     return `<div class="thread-item${t.pinned ? ' pinned' : ''}" data-id="${t.id}">
       ${t.pinned ? '<span class="pin-badge">📌</span>' : ''}
-      <div class="thread-avatar tc-${t.color || 'green'}">${esc(t.name.charAt(0))}</div>
+      <div class="thread-avatar ${t.appId ? 'tc-applink' : 'tc-' + (t.color || 'green')}">${esc(t.name.charAt(0))}</div>
       <div class="thread-info">
         <div class="thread-name">${highlight(t.name, memoQuery)}</div>
         <div class="thread-preview">${highlight(preview, memoQuery)}</div>
@@ -1082,8 +1082,84 @@ function renderApps() {
   listEl.innerHTML = apps.map(a => renderAppItem(a, view)).join('');
 
   listEl.querySelectorAll('[data-id]').forEach(el => {
-    el.onclick = () => openAppEditor(el.dataset.id);
+    el.onclick = ev => showAppItemMenu(el.dataset.id, ev);
   });
+}
+
+// ステータスバッジHTML
+function statusBadge(a) {
+  if (!a.status || !APP_STATUS_LABELS[a.status]) return '';
+  return `<span class="app-status-badge ${a.status}">${APP_STATUS_LABELS[a.status]}</span>`;
+}
+
+// アプリをタップ → 起動/共有/メモ/編集のメニュー
+function showAppItemMenu(appId, e) {
+  const a = db.apps.find(x => x.id === appId); if (!a) return;
+  closeMenus();
+  const menu = document.createElement('div');
+  menu.className = 'context-menu active';
+  positionMenu(menu, e.clientX ?? 20, e.clientY ?? 100);
+  const hasUrl = !!(a.url || '').trim();
+  menu.innerHTML = `
+    ${hasUrl ? '<button class="ctx-btn" data-a="open">🚀 開く</button>' : ''}
+    ${hasUrl ? '<button class="ctx-btn" data-a="share">📤 共有（LINE等に送る）</button>' : ''}
+    <button class="ctx-btn" data-a="memo">📝 開発ノート</button>
+    <button class="ctx-btn" data-a="edit">✏️ 編集</button>`;
+  document.body.appendChild(menu);
+  showOverlay(() => menu.remove());
+  const done = () => { hideOverlay(); menu.remove(); };
+  if (hasUrl) {
+    menu.querySelector('[data-a=open]').onclick  = () => { done(); openAppUrl(a); };
+    menu.querySelector('[data-a=share]').onclick = () => { done(); shareApp(a); };
+  }
+  menu.querySelector('[data-a=memo]').onclick = () => { done(); openAppMemoThread(a); };
+  menu.querySelector('[data-a=edit]').onclick = () => { done(); openAppEditor(a.id); };
+}
+
+// 🚀 開く：URLならブラウザで開く。ローカルパス等はコピーのみ
+function openAppUrl(a) {
+  const url = (a.url || '').trim();
+  if (!url) return;
+  if (!/^https?:\/\//i.test(url)) {
+    copyTextToClipboard(url);
+    showToast('📋 起動先をコピーしました（スマホからは開けないパスです）');
+    return;
+  }
+  a.updatedAt = Date.now(); save(); renderApps();
+  window.open(url, '_blank');
+}
+
+// 📤 共有：スマホの共有メニュー（LINE等）。使えない環境ではコピー
+async function shareApp(a) {
+  const url = (a.url || '').trim(); if (!url) return;
+  if (navigator.share) {
+    try { await navigator.share({ title: a.name, url }); } catch (e) { /* キャンセルは無視 */ }
+  } else {
+    copyTextToClipboard(url);
+    showToast('📋 URLをコピーしました');
+  }
+}
+
+function copyTextToClipboard(text) {
+  if (navigator.clipboard) { navigator.clipboard.writeText(text).catch(() => {}); return; }
+  const ta = document.createElement('textarea');
+  ta.value = text; document.body.appendChild(ta);
+  ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+}
+
+// 📝 開発ノート：アプリ専用スレッド（無ければ作成してメモタブで開く）
+function openAppMemoThread(a) {
+  let t = db.threads.find(x => x.id === a.threadId);
+  if (!t) {
+    t = { id: uid(), name: `${a.name}`, pinned: false, color: 'gray', appId: a.id,
+          createdAt: Date.now(), updatedAt: Date.now() };
+    db.threads.push(t);
+    db.messages[t.id] = [];
+    a.threadId = t.id;
+    save();
+  }
+  switchTab('memo');
+  openThread(t.id);
 }
 
 function renderAppItem(a, view) {
@@ -1099,7 +1175,7 @@ function renderAppItem(a, view) {
     return `<div class="app-item-thread" data-id="${a.id}">
       <div class="thread-avatar ${iconBg}">${iconHtml}</div>
       <div class="thread-info">
-        <div class="thread-name">${highlight(a.name, appQuery)}</div>
+        <div class="thread-name">${highlight(a.name, appQuery)}${statusBadge(a)}</div>
         <div class="thread-preview">${highlight(a.description || a.url || '', appQuery)}</div>
       </div>
     </div>`;
@@ -1108,7 +1184,7 @@ function renderAppItem(a, view) {
     return `<div class="app-item-detail" data-id="${a.id}">
       <div class="app-card-icon ${iconBg}">${iconHtml}</div>
       <div class="app-card-info">
-        <div class="app-card-name">${highlight(a.name, appQuery)}</div>
+        <div class="app-card-name">${highlight(a.name, appQuery)}${statusBadge(a)}</div>
         <div class="app-card-desc">${highlight(a.description || a.url || '', appQuery)}</div>
         ${tagsHtml}
       </div>
@@ -1163,13 +1239,25 @@ function openAppEditor(id) {
   $('app-tag-input').value  = (a?.tags || []).join(', ');
   setIconPreview(a?.icon || '📱', a?.iconImage || null, a?.color || 'green');
   selectColorSwatch(a?.color || 'green');
+  selectAppStatus(a?.status || 'dev');
   $('btn-delete-app').style.display = a ? 'block' : 'none';
   navPush();
   $('main-view').classList.remove('active');
   $('screen-app-edit').classList.add('active');
 }
 
-let _appIcon = '📱', _appIconImage = null, _appColor = 'green';
+let _appIcon = '📱', _appIconImage = null, _appColor = 'green', _appStatus = 'dev';
+
+// アプリのステータス（構想中/開発中/運用中/休止）
+const APP_STATUS_LABELS = { idea: '構想中', dev: '開発中', live: '運用中', paused: '休止' };
+function selectAppStatus(s) {
+  _appStatus = s;
+  document.querySelectorAll('#app-status-row .status-chip').forEach(c =>
+    c.classList.toggle('selected', c.dataset.s === s));
+}
+document.querySelectorAll('#app-status-row .status-chip').forEach(c => {
+  c.onclick = () => selectAppStatus(c.dataset.s);
+});
 
 function setIconPreview(emoji, image, color) {
   _appIcon = emoji; _appIconImage = image; _appColor = color;
@@ -1225,6 +1313,7 @@ $('btn-save-app').onclick = () => {
       icon: _appIcon,
       iconImage: _appIconImage,
       color: _appColor,
+      status: _appStatus,
       updatedAt: Date.now()
     });
   } else {
@@ -1237,6 +1326,7 @@ $('btn-save-app').onclick = () => {
       icon: _appIcon,
       iconImage: _appIconImage,
       color: _appColor,
+      status: _appStatus,
       createdAt: Date.now(),
       updatedAt: Date.now()
     });

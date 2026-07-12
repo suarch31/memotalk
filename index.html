@@ -140,6 +140,14 @@
     <label class="form-label">アプリ名 *</label>
     <input type="text" id="app-name-input" placeholder="例: 株価通知Bot" maxlength="60">
 
+    <label class="form-label">ステータス</label>
+    <div id="app-status-row" class="status-row">
+      <button class="status-chip" data-s="idea">構想中</button>
+      <button class="status-chip" data-s="dev">開発中</button>
+      <button class="status-chip" data-s="live">運用中</button>
+      <button class="status-chip" data-s="paused">休止</button>
+    </div>
+
     <label class="form-label">URL / 起動先</label>
     <input type="text" id="app-url-input" placeholder="https://... または C:\path\to\app">
 
